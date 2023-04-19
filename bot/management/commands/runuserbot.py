@@ -9,7 +9,8 @@ from telegram import (
     InlineKeyboardMarkup,
     Update,
     ReplyKeyboardRemove,
-    ReplyKeyboardMarkup
+    ReplyKeyboardMarkup,
+    CallbackQuery
 )
 from telegram.ext import (
     Updater,
@@ -74,8 +75,8 @@ class Command(BaseCommand):
             query.answer()
             keyboard = [
                 [
-                    InlineKeyboardButton("FAQ_1", callback_data="FAQ_1"),
-                    InlineKeyboardButton("FAQ_2", callback_data="FAQ_2"),
+                    InlineKeyboardButton("План 1", callback_data="FAQ_1"),
+                    InlineKeyboardButton("План 2", callback_data="FAQ_2"),
                     InlineKeyboardButton("Назад", callback_data="to_start"),
                 ]
             ]
@@ -108,12 +109,12 @@ class Command(BaseCommand):
             query.answer()
             keyboard = [
                 [
-                    InlineKeyboardButton("Имя", callback_data="Имя"),
-                    InlineKeyboardButton("Телефон", callback_data="Телефон"),
-                    InlineKeyboardButton("Email", callback_data="Email"),
+                    InlineKeyboardButton("Имя", callback_data="update_name"),
+                    InlineKeyboardButton("Телефон", callback_data="update_phone"),
+                    InlineKeyboardButton("Email", callback_data="update_email"),
                 ],
                 [
-                    InlineKeyboardButton("Адрес доставки", callback_data="Адрес доставки"),
+                    InlineKeyboardButton("Адрес доставки", callback_data="update_address"),
                     InlineKeyboardButton("Договор Оферты", callback_data="Договор Оферты"),
                     InlineKeyboardButton("Назад", callback_data="to_start"),
                 ]
@@ -123,6 +124,48 @@ class Command(BaseCommand):
                 text="Выберете интересующий вопрос", reply_markup=reply_markup
             )
             return 'GREETINGS'
+
+        def update_form(update, _):
+            query = update.callback_query
+            query.answer()
+            keyboard = [
+                [
+                    InlineKeyboardButton("Изменить", callback_data="update_field"),
+                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            query.edit_message_text(
+                text=f"Обновить {query.data}", reply_markup=reply_markup
+            )
+            return 'GREETINGS'
+
+        def send_field_info(update, _):
+            query = update.callback_query
+            query.edit_message_text(
+                f'Обновялем {query.data} Введите новое значение'
+            )
+            return 'UPDATE'
+
+        def update_field(update, _):
+            user = update.message.from_user
+            chat_instance = update.message.chat.id
+            logger.info("Пользователь %s рассказал: %s", user.first_name, update.message.text)
+            text = update.message.text
+            update.message.reply_text(f'Спасибо! Вы ввели {text}')
+            print(update)
+
+            return 'BACK_TO_GREETINGS'
+
+        def echo(update, context):
+            # добавим в начало полученного сообщения строку 'ECHO: '
+            text = 'ECHO: ' + update.message.text
+            # `update.effective_chat.id` - определяем `id` чата,
+            # откуда прилетело сообщение
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=text)
+            print(update)
+
 
         def cancel(update, _):
             # определяем пользователя
@@ -142,15 +185,26 @@ class Command(BaseCommand):
             states={
                 'GREETINGS': [
                     CallbackQueryHandler(choose_plan, pattern='^' + str(ONE) + '$'),
-                    CallbackQueryHandler(faq, pattern='^' + 'to_FAQ' + '$'),
-                    CallbackQueryHandler(start_conversation, pattern='^' + 'to_start' + '$'),
-                    CallbackQueryHandler(update_profile, pattern='^' + 'to_profile' + '$'),
+                    CallbackQueryHandler(faq, pattern='to_FAQ'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    CallbackQueryHandler(update_profile, pattern='to_profile'),
+                    CallbackQueryHandler(update_form, pattern='(update_name|update_phone|update_email|update_address)'),
+                    CallbackQueryHandler(send_field_info, pattern='update_field'),
+                ],
+                'UPDATE': [
+                    MessageHandler(Filters.text & ~Filters.command, update_field)
+                ],
+                'BACK_TO_GREETINGS': [
+                    CommandHandler('start', start_conversation)
                 ]
             },
             fallbacks = [CommandHandler('cancel', cancel)]
         )
 
         dispatcher.add_handler(conv_handler)
+
+        # echo_handler = MessageHandler(Filters.text, echo)
+        # dispatcher.add_handler(echo_handler)
 
         updater.start_polling()
         updater.idle()
