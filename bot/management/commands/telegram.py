@@ -1,4 +1,3 @@
-
 from bot.models import Profile
 
 from django.core.management import BaseCommand
