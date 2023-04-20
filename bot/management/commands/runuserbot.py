@@ -300,9 +300,7 @@ class Command(BaseCommand):
                                      text=text)
             return 'GET_ORDER_NAME'
 
-        def get_order_name(update, context):
-            query = update.callback_query
-            #query.answer()
+        def get_order_name(update, _):
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
@@ -312,9 +310,6 @@ class Command(BaseCommand):
             update.message.reply_text(
                 text="Ваш заказ успешно создан", reply_markup=reply_markup
             )
-            # text = 'ECHO: ' + update.message.text + 'Ваш заказ успешно создан'
-            # context.bot.send_message(chat_id=update.effective_chat.id,
-            #                          text=text)
             return 'GREETINGS'
 
         def update_form(update, _):
