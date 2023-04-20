@@ -88,21 +88,77 @@ class Command(BaseCommand):
             return 'PLAN'
 
         def faq(update, _):
-            print('faq ')
             query = update.callback_query
-            query.answer()
+            print(query.data)
+
             keyboard = [
                 [
-                    InlineKeyboardButton("FAQ_1", callback_data='FAQ_1'),
-                    InlineKeyboardButton("FAQ_2", callback_data='FAQ_2'),
-                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                    InlineKeyboardButton("Можно хранить", callback_data='FAQ_1'),
+                    InlineKeyboardButton("Нельзя хранить", callback_data='FAQ_2'),
+                    InlineKeyboardButton("Как храним", callback_data="FAQ_3"),
+                ],
+                [
+                    InlineKeyboardButton("Адрес", callback_data='address'),
+                    InlineKeyboardButton("Цены", callback_data='price'),
+                    InlineKeyboardButton("Режим Работы", callback_data="schedule"),
+                ],
+                [
+                    InlineKeyboardButton("Как оформить хранение", callback_data='FAQ_4'),
+                    InlineKeyboardButton("Как забрать вещи", callback_data='FAQ_5'),
+                ],
+                [
+                    InlineKeyboardButton("Контакты", callback_data='contacts'),
+                    InlineKeyboardButton("На главный", callback_data="to_start"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            query.edit_message_text(
-                text="Выберете интересующий вопрос", reply_markup=reply_markup
-            )
-            return 'GREETINGS'
+
+            query.answer()
+
+            if query.data == 'to_FAQ':
+                query.edit_message_text(
+                    text="Выберете интересующий вопрос", reply_markup=reply_markup
+                )
+
+            if query.data == 'FAQ_1':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'FAQ_2':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'FAQ_3':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'FAQ_4':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'FAQ_5':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'address':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'price':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'schedule':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+            if query.data == 'contacts':
+                query.edit_message_text(
+                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
+                )
+
+
+            return 'SHOW_INFO'
 
         def update_profile(update, _):
             query = update.callback_query
@@ -196,6 +252,10 @@ class Command(BaseCommand):
                 ],
                 'BACK_TO_GREETINGS': [
                     CommandHandler('start', start_conversation)
+                ],
+                'SHOW_INFO':[
+                    CallbackQueryHandler(faq, pattern='(FAQ_1|FAQ_2|FAQ_3|FAQ_4|FAQ_5|address|price|schedule|contacts)'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ]
             },
             fallbacks = [CommandHandler('cancel', cancel)]
