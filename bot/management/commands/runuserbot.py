@@ -301,10 +301,21 @@ class Command(BaseCommand):
             return 'GET_ORDER_NAME'
 
         def get_order_name(update, context):
-            text = 'ECHO: ' + update.message.text + 'Ваш заказ успешно создан'
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
-            return ConversationHandler.END
+            query = update.callback_query
+            #query.answer()
+            keyboard = [
+                [
+                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text(
+                text="Ваш заказ успешно создан", reply_markup=reply_markup
+            )
+            # text = 'ECHO: ' + update.message.text + 'Ваш заказ успешно создан'
+            # context.bot.send_message(chat_id=update.effective_chat.id,
+            #                          text=text)
+            return 'GREETINGS'
 
         def update_form(update, _):
             query = update.callback_query
