@@ -30,12 +30,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Этапы/состояния разговора
-FIRST, SECOND = range(2)
-# Данные обратного вызова
-ONE, TWO, THREE, FOUR = range(4)
-
-
 def step_count():
     step = 1
     while True:
@@ -327,29 +321,29 @@ class Command(BaseCommand):
             )
             return 'ORDER_BOX'
 
-        def send_field_info(update, _):
-            query = update.callback_query
-            query.edit_message_text(
-                f'Обновялем {query.data} Введите новое значение'
-            )
-            return 'UPDATE'
-
-        def update_field(update, _):
-            user = update.message.from_user
-            chat_instance = update.message.chat.id
-            logger.info("Пользователь %s рассказал: %s", user.first_name, update.message.text)
-            text = update.message.text
-            update.message.reply_text(f'Спасибо! Вы ввели {text}')
-            print(update)
-
-            return 'BACK_TO_GREETINGS'
-
-        def echo(update, context):
-            # добавим в начало полученного сообщения строку 'ECHO: '
-            text = 'ECHO: ' + update.message.text
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
-            print(update)
+        # def send_field_info(update, _):
+        #     query = update.callback_query
+        #     query.edit_message_text(
+        #         f'Обновялем {query.data} Введите новое значение'
+        #     )
+        #     return 'UPDATE'
+        #
+        # def update_field(update, _):
+        #     user = update.message.from_user
+        #     chat_instance = update.message.chat.id
+        #     logger.info("Пользователь %s рассказал: %s", user.first_name, update.message.text)
+        #     text = update.message.text
+        #     update.message.reply_text(f'Спасибо! Вы ввели {text}')
+        #     print(update)
+        #
+        #     return 'BACK_TO_GREETINGS'
+        #
+        # def echo(update, context):
+        #     # добавим в начало полученного сообщения строку 'ECHO: '
+        #     text = 'ECHO: ' + update.message.text
+        #     context.bot.send_message(chat_id=update.effective_chat.id,
+        #                              text=text)
+        #     print(update)
 
 
         def cancel(update, _):
@@ -370,11 +364,8 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(order_box, pattern='to_box_order'),
                     CallbackQueryHandler(update_form, pattern='(update_name|update_phone|update_email|update_address)'),
-                    CallbackQueryHandler(send_field_info, pattern='update_field'),
                 ],
-                'UPDATE': [
-                    MessageHandler(Filters.text & ~Filters.command, update_field)
-                ],
+
                 'SHOW_INFO':[
                     CallbackQueryHandler(faq, pattern='(FAQ_.*|address|price|schedule|contacts)'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
@@ -411,18 +402,5 @@ class Command(BaseCommand):
 
         dispatcher.add_handler(conv_handler)
 
-        # echo_handler = MessageHandler(Filters.text, echo)
-        # dispatcher.add_handler(echo_handler)
-
         updater.start_polling()
         updater.idle()
-
-
-
-
-if __name__ == '__main__':
-    env = environs.Env()
-    env.read_env()
-
-
-    print('olol')
