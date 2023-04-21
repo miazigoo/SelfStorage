@@ -61,6 +61,7 @@ class Order(models.Model):
     size = models.CharField(max_length=50, verbose_name='Размер', null=True, blank=True)
     things = models.TextField(max_length=50, verbose_name='Список вещей', null=True, blank=True)
     title = models.CharField(max_length=200, verbose_name='Название заказа', null=True, blank=True)
+    delivery_type = models.CharField(max_length=25, verbose_name="Тип доставки", null=True, blank=True)
 
     def get_description(self):
         if self.things:

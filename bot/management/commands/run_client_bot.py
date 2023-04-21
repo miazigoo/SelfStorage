@@ -1,6 +1,9 @@
 import logging
+import random
+
 from django.core.management.base import BaseCommand
-from bot.models import Client, Order, Storage
+from bot.models import (Client, Order, Storage,
+                        DeliveryStatus, Delivery, Box)
 from phonenumbers import is_valid_number, parse
 import environs
 import re
@@ -41,6 +44,77 @@ def step_count():
 step_counter = step_count()
 
 
+def calculate_price(weight, size):
+    start_price = 750
+    weight_cof = None
+    size_cof = None
+    all_weight_cof = {
+        'weight_le_10_cof': 0.7,
+        'weight_10to25_cof': 0.9,
+        'weight_25to50_cof': 1.1,
+        'weight_50to75_cof': 1.3,
+        'weight_ge_70_cof': 1.6,
+    }
+    all_size_cof = {
+        'volume_le_1': 0.5,
+        'volume_1to3': 0.9,
+        'volume_3to7': 1.2,
+        'volume_7to10': 1.6,
+        'volume_ge_10': 2
+    }
+    if weight in all_weight_cof:
+        weight_cof = all_weight_cof[weight]
+
+    if size in all_size_cof:
+        size_cof = all_size_cof[size]
+
+    if weight_cof is None:
+        weight_cof = 0.7
+
+    if size_cof is None:
+        size_cof = 0.5
+
+    if weight_cof is None and size_cof is None:
+        weight_cof = 0.7
+        size_cof = 0.5
+
+    month_price = (start_price * weight_cof + start_price * size_cof)
+    half_year_price = month_price * 6
+    return month_price, half_year_price
+
+
+def value_from_data(weight, size):
+    weight_value = None
+    size_value = None
+    all_weight = {
+        'weight_le_10': "до 10кг",
+        'weight_10to25': "10-25кг",
+        'weight_25to50': "25-50кг",
+        'weight_50to75': "50-75кг",
+        'weight_ge_70': "75кг+",
+    }
+    all_size = {
+        'volume_le_1': "менее 1 куб.м",
+        'volume_1to3': "1 - 3 куб.м",
+        'volume_3to7': "3 - 7 куб.м",
+        'volume_7to10': "7 - 10 куб.м",
+        'volume_ge_10': "более 10 куб.м"
+    }
+    if weight in all_weight:
+        weight_value = all_weight[weight]
+
+    if size in all_size:
+        size_value = all_size[size]
+
+    if not weight in all_weight:
+        weight_value = "Необходимо замерить"
+
+    if not size in all_size:
+        size_value = "Необходимо замерить"
+
+    return weight_value, size_value
+
+
 class Command(BaseCommand):
     help = 'Телеграм-бот'
 
@@ -50,8 +124,6 @@ class Command(BaseCommand):
         tg_token = env('TG_TOKEN')
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
-        global profile_order
-        profile_order = {}
 
         def start_conversation(update, _):
             query = update.callback_query
@@ -79,7 +151,6 @@ class Command(BaseCommand):
 
         def faq(update, _):
             query = update.callback_query
-            print(query.data)
 
             keyboard = [
                 [
@@ -148,10 +219,8 @@ class Command(BaseCommand):
                 )
             return 'SHOW_INFO'
 
-        def order_box(update, _):
+        def order_box(update, context):
             query = update.callback_query
-            chat_id = update.effective_chat.id
-            # profile, _ = Client.objects.get_or_create(chat_id=chat_id)
 
             if query.data == 'to_box_order':
                 storage = Storage.objects.all()[0]
@@ -172,9 +241,8 @@ class Command(BaseCommand):
                     reply_markup=reply_markup
                 )
             if query.data == 'Привезу_сам' or query.data == 'Заберите_бесплатно':
-                profile_order[chat_id] = {
-                    'DeliveryStatus.name': query.data
-                }
+                type_delivery = query.data
+                context.user_data['type_delivery'] = type_delivery
                 keyboard = [
                     [
                         InlineKeyboardButton("Укажите вес", callback_data="choose_weight"),
@@ -189,9 +257,11 @@ class Command(BaseCommand):
                     text="Знаете ли Вы вес своих вещей?", reply_markup=reply_markup
                 )
             if query.data == 'choose_weight':
+                choose_weight = query.data
+                context.user_data['choose_weight'] = choose_weight
                 keyboard = [
                     [
-                        InlineKeyboardButton("до 10 кг", callback_data="weight_le_10"),
+                        InlineKeyboardButton("до 10кг", callback_data="weight_le_10"),
                         InlineKeyboardButton("10-25кг", callback_data="weight_10to25"),
                         InlineKeyboardButton("25-50кг", callback_data="weight_25to50"),
                     ],
@@ -208,9 +278,8 @@ class Command(BaseCommand):
 
             if query.data == "weight_le_10" or "weight_10to25" or 'weight_25to50' or \
                     'weight_50to75' or "weight_ge_70" in query.data:
-                profile_order[chat_id] = {
-                    'weight': query.data
-                }
+                weight = query.data
+                context.user_data['weight'] = weight
 
             if query.data == 'no_weight_info' or 'weight_' in query.data:
                 keyboard = [
@@ -227,10 +296,12 @@ class Command(BaseCommand):
                     text="Знаете ли объем ваших вещей", reply_markup=reply_markup
                 )
             if query.data == 'choose_volume':
+                choose_volume = query.data
+                context.user_data['choose_volume'] = choose_volume
                 keyboard = [
                     [
-                        InlineKeyboardButton("менее 1 куб.м ", callback_data="volume_le_1"),
-                        InlineKeyboardButton("1 - 3 куб.м ", callback_data="volume_1to3"),
+                        InlineKeyboardButton("менее 1 куб.м", callback_data="volume_le_1"),
+                        InlineKeyboardButton("1 - 3 куб.м", callback_data="volume_1to3"),
                         InlineKeyboardButton("3 - 7 куб.м", callback_data="volume_3to7"),
                     ],
                     [
@@ -246,9 +317,8 @@ class Command(BaseCommand):
 
             if query.data == "volume_le_1" or "volume_1to3" or 'volume_3to7' or \
                     'volume_7to10' or "volume_ge_10" in query.data:
-                profile_order[chat_id] = {
-                    'size': query.data
-                }
+                size = query.data
+                context.user_data['size'] = size
 
             if re.match("^volume_", query.data) or query.data == 'no_volume_info' or query.data == 'no_weight_info':
                 keyboard = [
@@ -262,10 +332,17 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 if re.match("^volume_", query.data):
+                    size = context.user_data.get('size')
+                    weight = context.user_data.get('weight')
+                    month_price, half_year_price = calculate_price(weight, size)
+                    text = "Спасибо за оформление заказа.\n" \
+                           "Примерная стоимость на 1 календарный месяц " \
+                           f"составляет {month_price} RUB.\n" \
+                           f"Примерная стоимость на пол года {half_year_price} RUB.\n" \
+                           "Чтобы продолжить оформление в соответствии с законодательством " \
+                           "нам нужно Ваше согласие на обработку персональный данных"
                     query.edit_message_text(
-                        text='''Спасибо за оформление заказа. Примерная стоимость составляет ХХ.
-                              Чтобы продолжить оформление в соответствии с законодательством 
-                             нам нужно Ваше согласие на обработку персональный данных ''', reply_markup=reply_markup
+                        text=text, reply_markup=reply_markup
                     )
                 else:
                     query.edit_message_text(
@@ -274,47 +351,13 @@ class Command(BaseCommand):
                                 нам нужно Ваше согласие на обработку персональный данных ''',
                         reply_markup=reply_markup
                     )
-            # weight_things = None
-            # volume_things = None
-            #
-            # if query.data == "weight_le_10":
-            #     weight_things = "до 10 кг"
-            # if query.data == "weight_10to25":
-            #     weight_things = "10-25кг"
-            # if query.data == "weight_25to50":
-            #     weight_things = "25-50кг"
-            # if query.data == "weight_50to75":
-            #     weight_things = "50-75кг"
-            # if query.data == "weight_ge_70":
-            #     weight_things = "75кг+"
-            #
-            # if query.data == "volume_le_1":
-            #     weight_things = "менее 1 куб.м"
-            # if query.data == "volume_1to3":
-            #     weight_things = "1 - 3 куб.м"
-            # if query.data == "volume_3to7":
-            #     weight_things = "3 - 7 куб.м"
-            # if query.data == "volume_7to10":
-            #     weight_things = "7 - 10 куб.м"
-            # if query.data == "volume_ge_10":
-            #     weight_things = "более 10 куб.м"
-            #
-            # order, _ = Order.objects.get_or_create(client=profile, title=None,
-            #                                        defaults={
-            #                                            'weight': weight_things,
-            #                                            'size': volume_things,
-            #                                        }
-            #                                        )
-            #
             query.answer()
             return 'ORDER_BOX'
 
-        def process_personal_data(update, _):
+        def process_personal_data(update, context):
             query = update.callback_query
-            chat_id = update.effective_chat.id
-            profile_order[chat_id] = {
-                'personal_data_consent_date': True
-            }
+            personal_data_consent_date = True
+            context.user_data['personal_data_consent_date'] = personal_data_consent_date
             query.answer()
             keyboard = [
                 [
@@ -329,53 +372,30 @@ class Command(BaseCommand):
 
         def get_name(update, context):
             chat_id = update.message.chat_id
-            profile_order[chat_id] = {
-                'chat_id': chat_id,
-                'nickname': update.message.from_user.username,
-                'name': update.message.text,
-            }
+            nickname = update.message.from_user.username
+            name = update.message.text
+            context.user_data['chat_id'] = chat_id
+            context.user_data['nickname'] = nickname
+            context.user_data['name'] = name
 
-            # profile, _ = Client.objects.get_or_create(
-            #     chat_id=chat_id,
-            #     defaults={
-            #         'nickname': update.message.from_user.username,
-            #         'name': update.message.text,
-            #     }
-            # )
             text = '✅ Ув. {}\n\n<b>Введите ваш адрес</b> '.format(update.message.text)
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text)
             return 'GET_ADDRESS'
 
         def get_address(update, context):
-            chat_id = update.effective_chat.id
-            profile_order[chat_id] = {
-                'address': update.message.text,
-            }
-            # profile, _ = Client.objects.get_or_create(
-            #     chat_id=chat_id,
-            #     defaults={
-            #         'address': update.message.text,
-            #     }
-            # )
+            address = update.message.text
+            context.user_data['address'] = address
+
             text = '<b>Введите номер телефона:</b>'
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text)
             return 'GET_PHONE'
 
         def get_phone(update, context):
-            chat_id = update.effective_chat.id
             phone_number = update.message.text
             if is_valid_number(parse(phone_number, 'RU')):
-                profile_order[chat_id] = {
-                    'tel_number': update.message.text,
-                }
-                # profile, _ = Client.objects.get_or_create(
-                #     chat_id=chat_id,
-                #     defaults={
-                #         'tel_number': update.message.text,
-                #     }
-                # )
+                context.user_data['phone_number'] = phone_number
                 text = '<b>Введите email</b>'
                 context.bot.send_message(chat_id=update.effective_chat.id,
                                          text=text)
@@ -386,34 +406,16 @@ class Command(BaseCommand):
                 return 'GET_PHONE'
 
         def get_email(update, context):
-            chat_id = update.effective_chat.id
-            profile_order[chat_id] = {
-                'email': update.message.text,
-            }
-            # profile, _ = Client.objects.get_or_create(
-            #     chat_id=chat_id,
-            #     defaults={
-            #         'email': update.message.text,
-            #     }
-            # )
+            email = update.message.text
+            context.user_data['email'] = email
             text = 'ECHO: ' + update.message.text + '<b> Введите список вещей в одном сообщении</b>'
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text)
             return 'GET_ITEM_LIST'
 
         def get_item_list(update, context):
-            chat_id = update.effective_chat.id
-            profile_order[chat_id] = {
-                'things': update.message.text,
-            }
-            # profile, _ = Client.objects.get_or_create(chat_id=chat_id)
-            # print("profile пк = ", profile.pk, profile)
-            # order, _ = Order.objects.get_or_create(client=profile, title=None,
-            #                                        defaults={
-            #                                            'things': update.message.text,
-            #                                        }
-            #                                        )
-            # print('weight = ', profile_order[chat_id]['weight'], 'size = ', profile_order[chat_id]['size'])
+            things = update.message.text
+            context.user_data['things'] = things
             text = 'ECHO: ' + update.message.text + ' Назовите заказ \n' \
                                                     'Например, зимние куртки ' \
                                                     'или Спорт инвентарь'
@@ -421,19 +423,41 @@ class Command(BaseCommand):
                                      text=text)
             return 'GET_ORDER_NAME'
 
-        def get_order_name(update, _):
+        def get_order_name(update, context):
             chat_id = update.effective_chat.id
-            profile_order[chat_id] = {
-                'title': update.message.text,
-            }
-            # profile, _ = Client.objects.get_or_create(chat_id=chat_id)
-            print("profile пк = ")
-            print(profile_order[chat_id])
-            # order, _ = Order.objects.get_or_create(client=profile,
-            #                                        defaults={
-            #                                            'title': update.message.text,
-            #                                        }
-            #                                        )
+            title = update.message.text
+            size = context.user_data.get('size')
+            weight = context.user_data.get('weight')
+            weight_value, size_value = value_from_data(weight, size)
+            type_delivery = context.user_data.get('type_delivery')
+            nickname = context.user_data.get('nickname')
+            name = context.user_data.get('name')
+            phone_number = context.user_data.get('phone_number')
+            address = context.user_data.get('address')
+            email = context.user_data.get('email')
+            things = context.user_data.get('things')
+
+            all_box = Box.objects.all()
+            random_box = random.choice(all_box)
+            print('random_box = ', random_box)
+            profile, _ = Client.objects.get_or_create(chat_id=chat_id,
+                                                      defaults={
+                                                          'nickname': nickname,
+                                                          'name': name,
+                                                          'address': address,
+                                                          'email': email,
+                                                          'tel_number': phone_number,
+                                                          'personal_data_consent': True
+                                                      })
+            order = Order.objects.create(
+                client=profile,
+                weight=weight_value,
+                size=size_value,
+                things=things,
+                title=title,
+                delivery_type=type_delivery,
+                box=random_box,
+            )
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
@@ -460,30 +484,6 @@ class Command(BaseCommand):
             )
             return 'ORDER_BOX'
 
-        # def send_field_info(update, _):
-        #     query = update.callback_query
-        #     query.edit_message_text(
-        #         f'Обновялем {query.data} Введите новое значение'
-        #     )
-        #     return 'UPDATE'
-        #
-        # def update_field(update, _):
-        #     user = update.message.from_user
-        #     chat_instance = update.message.chat.id
-        #     logger.info("Пользователь %s рассказал: %s", user.first_name, update.message.text)
-        #     text = update.message.text
-        #     update.message.reply_text(f'Спасибо! Вы ввели {text}')
-        #     print(update)
-        #
-        #     return 'BACK_TO_GREETINGS'
-        #
-        # def echo(update, context):
-        #     # добавим в начало полученного сообщения строку 'ECHO: '
-        #     text = 'ECHO: ' + update.message.text
-        #     context.bot.send_message(chat_id=update.effective_chat.id,
-        #                              text=text)
-        #     print(update)
-
         def cancel(update, _):
             user = update.message.from_user
             logger.info("Пользователь %s отменил разговор.", user.first_name)
@@ -494,7 +494,6 @@ class Command(BaseCommand):
             return ConversationHandler.END
 
         conv_handler = ConversationHandler(
-            # per_message=True,
             entry_points=[CommandHandler('start', start_conversation)],
             states={
                 'GREETINGS': [
