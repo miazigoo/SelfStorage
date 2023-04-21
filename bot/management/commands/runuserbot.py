@@ -22,6 +22,9 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
+from bot.models import (
+    Order,
+)
 
 # Ведение журнала логов
 logging.basicConfig(
@@ -56,7 +59,7 @@ class Command(BaseCommand):
                 [
                     InlineKeyboardButton("FAQ", callback_data='to_FAQ'),
                     InlineKeyboardButton("Заказать Бокс", callback_data="to_box_order"),
-                    InlineKeyboardButton("Мои Боксы", callback_data="Мои Боксы"),
+                    InlineKeyboardButton("Мои Боксы", callback_data="to_my_orders"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -225,7 +228,8 @@ class Command(BaseCommand):
             if re.match("^volume_", query.data) or query.data == 'no_volume_info' or query.data == 'no_weight_info':
                 keyboard = [
                     [
-                        InlineKeyboardButton("Согласен на обработку персональных данных", callback_data="personal_data_processing"),
+                        InlineKeyboardButton("Согласен на обработку персональных данных",
+                                             callback_data="personal_data_processing"),
                     ],
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
@@ -287,7 +291,6 @@ class Command(BaseCommand):
                                          text='Введите коректный номер')
                 return 'GET_PHONE'
 
-
         def get_email(update, context):
             text = 'ECHO: ' + update.message.text + 'Введите список вещей'
             context.bot.send_message(chat_id=update.effective_chat.id,
@@ -311,6 +314,71 @@ class Command(BaseCommand):
                 text="Ваш заказ успешно создан", reply_markup=reply_markup
             )
             return 'GREETINGS'
+
+        def show_my_orders(update, context):
+            query = update.callback_query
+            chat_id = update.effective_chat.id
+            orders = Order.objects.filter(end_storage_date__isnull=True, client__chat_id=chat_id)
+            print(orders)
+            print(chat_id)
+            query.answer()
+
+            if query.data == 'to_my_orders':
+                if not orders:
+                    keyboard = [
+                        [
+                            InlineKeyboardButton("Заказать Бокс", callback_data="to_box_order"),
+                            InlineKeyboardButton("На главный", callback_data="to_start"),
+                        ]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    query.edit_message_text(
+                        text="У нас еще нет Ваших вещей на хранении", reply_markup=reply_markup
+                    )
+                else:
+                    orders_keyboard = []
+                    for order in orders:
+                        callback_data = f"order_{order.pk}"
+                        orders_keyboard.append([InlineKeyboardButton(order.title, callback_data=callback_data)])
+
+                    to_start_keyboard = [
+                        [
+                            InlineKeyboardButton("На главный", callback_data="to_start"),
+                        ]
+                    ]
+                    orders_markup = InlineKeyboardMarkup(orders_keyboard + to_start_keyboard)
+                    query.edit_message_text(
+                        text=f"У вас есть {len(orders)} боксов. Выберите нужный", reply_markup=orders_markup
+                    )
+
+            if query.data.startswith('order_'):
+                order_pk = int(query.data.split('_')[1])
+                context.user_data['order_pk'] = order_pk
+                order_keyboard = [
+                    [
+                        InlineKeyboardButton("Забрать вещи", callback_data="take_things"),
+                        InlineKeyboardButton("Список вещей", callback_data="list_things"),
+                    ],
+                    [
+                        InlineKeyboardButton("Забыл забрать! Что делать?", callback_data="list_things"),
+                    ],
+                    [
+                        InlineKeyboardButton("Включить напоминания", callback_data="list_things"),
+                    ]
+                ]
+                to_orders_keyboard = [
+                    [
+                        InlineKeyboardButton("Заказы", callback_data="to_my_orders"),
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                order_markup = InlineKeyboardMarkup(order_keyboard + to_orders_keyboard)
+                query.edit_message_text(
+                        text="Что Вы хотите сделать?", reply_markup=order_markup
+                    )
+
+            return 'SHOW_ORDERS'
+
 
         def update_form(update, _):
             query = update.callback_query
@@ -369,11 +437,17 @@ class Command(BaseCommand):
                     CallbackQueryHandler(faq, pattern='to_FAQ'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(order_box, pattern='to_box_order'),
+                    CallbackQueryHandler(show_my_orders, pattern='to_my_orders'),
                     CallbackQueryHandler(update_form, pattern='(update_name|update_phone|update_email|update_address)'),
                 ],
 
                 'SHOW_INFO':[
                     CallbackQueryHandler(faq, pattern='(FAQ_.*|address|price|schedule|contacts)'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'SHOW_ORDERS': [
+                    CallbackQueryHandler(show_my_orders, pattern='to_my_orders|order_.*'),
+                    CallbackQueryHandler(order_box, pattern='to_box_order'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'ORDER_BOX':[
