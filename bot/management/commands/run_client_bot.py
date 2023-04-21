@@ -1,8 +1,9 @@
-from bot.models import *
 import logging
 from django.core.management.base import BaseCommand
-from django.conf import settings
+from bot.models import Client, Order, Storage
+from phonenumbers import is_valid_number, parse
 import environs
+import re
 from telegram import (
     InlineQueryResultArticle,
     InputTextMessageContent,
@@ -10,7 +11,8 @@ from telegram import (
     InlineKeyboardMarkup,
     Update,
     ReplyKeyboardRemove,
-    ReplyKeyboardMarkup
+    ReplyKeyboardMarkup,
+    CallbackQuery
 )
 from telegram.ext import (
     Updater,
@@ -28,10 +30,15 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Этапы/состояния разговора
-FIRST, SECOND = range(2)
-# Данные обратного вызова
-ONE, TWO, THREE, FOUR = range(4)
+
+def step_count():
+    step = 1
+    while True:
+        yield step
+        step = step + 1
+
+
+step_counter = step_count()
 
 
 class Command(BaseCommand):
@@ -50,13 +57,9 @@ class Command(BaseCommand):
                 query.answer()
             keyboard = [
                 [
-                    InlineKeyboardButton("Профиль", callback_data='to_profile'),
                     InlineKeyboardButton("FAQ", callback_data='to_FAQ'),
-                ],
-                [
-                    InlineKeyboardButton("Заказать Бокс", callback_data="Заказать Бокс"),
+                    InlineKeyboardButton("Заказать Бокс", callback_data="to_box_order"),
                     InlineKeyboardButton("Мои Боксы", callback_data="Мои Боксы"),
-                    InlineKeyboardButton("Мои Заказы", callback_data="Мои Заказы"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -67,26 +70,10 @@ class Command(BaseCommand):
                 )
             else:
                 update.message.reply_text(
-                    text="Выберете интресующий вас вопрос", reply_markup=reply_markup
+                    text="Выберете интересующий вас вопрос", reply_markup=reply_markup
                 )
+
             return 'GREETINGS'
-
-        def choose_plan(update, _):
-            query = update.callback_query
-            query.answer()
-            keyboard = [
-                [
-                    InlineKeyboardButton("План 1", callback_data="FAQ_1"),
-                    InlineKeyboardButton("План 2", callback_data="FAQ_2"),
-                    InlineKeyboardButton("Назад", callback_data="to_start"),
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            query.edit_message_text(
-                text="Выберете интересующий план", reply_markup=reply_markup
-            )
-
-            return 'PLAN'
 
         def faq(update, _):
             query = update.callback_query
@@ -157,27 +144,260 @@ class Command(BaseCommand):
                 query.edit_message_text(
                     text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
                 )
-
             return 'SHOW_INFO'
 
-        def update_profile(update, _):
+        def order_box(update, _):
+            query = update.callback_query
+            chat_id = update.effective_chat.id
+            profile, _ = Client.objects.get_or_create(chat_id=chat_id)
+
+            if query.data == 'to_box_order':
+                storage = Storage.objects.all()[0]
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Привезу сам", callback_data="Привезу_сам"),
+                        InlineKeyboardButton("Заберите бесплатно", callback_data="Заберите_бесплатно"),
+                    ],
+                    [
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.edit_message_text(
+                    text=f"Наш склад {storage.name} находится по адресу:\n" +
+                         f"{storage.address}\n" +
+                         'Для заказа бокса,пожалуйста, выберите, как удобнее передать вещи:',
+                    reply_markup=reply_markup
+                )
+            if query.data == 'Привезу_сам' or query.data == 'Заберите_бесплатно':
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Укажите вес", callback_data="choose_weight"),
+                        InlineKeyboardButton("Не знаю", callback_data="no_weight_info"),
+                    ],
+                    [
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.edit_message_text(
+                    text="Знаете ли Вы вес своих вещей?", reply_markup=reply_markup
+                )
+            if query.data == 'choose_weight':
+                keyboard = [
+                    [
+                        InlineKeyboardButton("до 10 кг", callback_data="weight_le_10"),
+                        InlineKeyboardButton("10-25кг", callback_data="weight_10to25"),
+                        InlineKeyboardButton("25-50кг", callback_data="weight_25to50"),
+                    ],
+                    [
+                        InlineKeyboardButton("50-75кг", callback_data="weight_50to75"),
+                        InlineKeyboardButton("75кг+", callback_data="weight_ge_70"),
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.edit_message_text(
+                    text="Выберите вес", reply_markup=reply_markup
+                )
+            if query.data == 'no_weight_info' or 'weight_' in query.data:
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Укажите объем", callback_data="choose_volume"),
+                        InlineKeyboardButton("Не знаю", callback_data="no_volume_info"),
+                    ],
+                    [
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.edit_message_text(
+                    text="Знаете ли объем ваших вещей", reply_markup=reply_markup
+                )
+            if query.data == 'choose_volume':
+                keyboard = [
+                    [
+                        InlineKeyboardButton("менее 1 куб.м ", callback_data="volume_le_1"),
+                        InlineKeyboardButton("1 - 3 куб.м ", callback_data="volume_1to3"),
+                        InlineKeyboardButton("3 - 7 куб.м", callback_data="volume_3to7"),
+                    ],
+                    [
+                        InlineKeyboardButton("7 - 10 куб.м", callback_data="volume_7to10"),
+                        InlineKeyboardButton("более 10 куб.м", callback_data="volume_ge_10"),
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                query.edit_message_text(
+                    text="Выберите объем", reply_markup=reply_markup
+                )
+            if re.match("^volume_", query.data) or query.data == 'no_volume_info' or query.data == 'no_weight_info':
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Согласен на обработку персональных данных",
+                                             callback_data="personal_data_processing"),
+                    ],
+                    [
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                if re.match("^volume_", query.data):
+                    query.edit_message_text(
+                        text='''Спасибо за оформление заказа. Примерная стоимость составляет ХХ.
+                              Чтобы продолжить оформление в соответствии с законодательством 
+                             нам нужно Ваше согласие на обработку персональный данных ''', reply_markup=reply_markup
+                    )
+                else:
+                    query.edit_message_text(
+                        text='''Спасибо за оформление заказа.
+                                Чтобы продолжить оформление в соответствии с законодательством 
+                                нам нужно Ваше согласие на обработку персональный данных ''',
+                        reply_markup=reply_markup
+                    )
+            # weight_things = None
+            # volume_things = None
+            #
+            # if query.data == "weight_le_10":
+            #     weight_things = "до 10 кг"
+            # if query.data == "weight_10to25":
+            #     weight_things = "10-25кг"
+            # if query.data == "weight_25to50":
+            #     weight_things = "25-50кг"
+            # if query.data == "weight_50to75":
+            #     weight_things = "50-75кг"
+            # if query.data == "weight_ge_70":
+            #     weight_things = "75кг+"
+            #
+            # if query.data == "volume_le_1":
+            #     weight_things = "менее 1 куб.м"
+            # if query.data == "volume_1to3":
+            #     weight_things = "1 - 3 куб.м"
+            # if query.data == "volume_3to7":
+            #     weight_things = "3 - 7 куб.м"
+            # if query.data == "volume_7to10":
+            #     weight_things = "7 - 10 куб.м"
+            # if query.data == "volume_ge_10":
+            #     weight_things = "более 10 куб.м"
+            #
+            # order, _ = Order.objects.get_or_create(client=profile, title=None,
+            #                                        defaults={
+            #                                            'weight': weight_things,
+            #                                            'size': volume_things,
+            #                                        }
+            #                                        )
+            #
+            query.answer()
+            return 'ORDER_BOX'
+
+        def process_personal_data(update, _):
             query = update.callback_query
             query.answer()
             keyboard = [
                 [
-                    InlineKeyboardButton("Имя", callback_data="update_name"),
-                    InlineKeyboardButton("Телефон", callback_data="update_phone"),
-                    InlineKeyboardButton("Email", callback_data="update_email"),
-                ],
-                [
-                    InlineKeyboardButton("Адрес доставки", callback_data="update_address"),
-                    InlineKeyboardButton("Договор Оферты", callback_data="Договор Оферты"),
                     InlineKeyboardButton("Назад", callback_data="to_start"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(
-                text="Выберете интересующий вопрос", reply_markup=reply_markup
+                text="В ответном сообщении укажите Ваш имя.", reply_markup=reply_markup
+            )
+            return 'PERSONAL_PROCCESSING'
+
+        def get_name(update, context):
+            chat_id = update.message.chat_id
+
+            profile, _ = Client.objects.get_or_create(
+                chat_id=chat_id,
+                defaults={
+                    'nickname': update.message.from_user.username,
+                    'name': update.message.text,
+                }
+            )
+            text = '✅ Ув. {}\n\n<b>Введите ваш адрес</b> '.format(update.message.text)
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=text)
+            return 'GET_ADDRESS'
+
+        def get_address(update, context):
+            chat_id = update.effective_chat.id
+            profile, _ = Client.objects.get_or_create(
+                chat_id=chat_id,
+                defaults={
+                    'address': update.message.text,
+                }
+            )
+            text = '<b>Введите номер телефона:</b>'
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=text)
+            return 'GET_PHONE'
+
+        def get_phone(update, context):
+            chat_id = update.effective_chat.id
+            phone_number = update.message.text
+            if is_valid_number(parse(phone_number, 'RU')):
+                profile, _ = Client.objects.get_or_create(
+                    chat_id=chat_id,
+                    defaults={
+                        'tel_number': update.message.text,
+                    }
+                )
+                text = '<b>Введите email</b>'
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text=text)
+                return 'GET_EMAIL'
+            else:
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text='Введите корректный номер')
+                return 'GET_PHONE'
+
+        def get_email(update, context):
+            chat_id = update.effective_chat.id
+            profile, _ = Client.objects.get_or_create(
+                chat_id=chat_id,
+                defaults={
+                    'email': update.message.text,
+                }
+            )
+            text = 'ECHO: ' + update.message.text + '<b> Введите список вещей в одном сообщении</b>'
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=text)
+            return 'GET_ITEM_LIST'
+
+        def get_item_list(update, context):
+            chat_id = update.effective_chat.id
+            profile, _ = Client.objects.get_or_create(chat_id=chat_id)
+            print("profile пк = ", profile.pk, profile)
+            order, _ = Order.objects.get_or_create(client=profile, title=None,
+                                                   defaults={
+                                                       'things': update.message.text,
+                                                   }
+                                                   )
+            print('weight = ', order.weight, 'size = ', order.size)
+            text = 'ECHO: ' + update.message.text + ' Назовите заказ \n' \
+                                                    'Например, зимние куртки ' \
+                                                    'или Спорт инвентарь'
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=text)
+            return 'GET_ORDER_NAME'
+
+        def get_order_name(update, _):
+            chat_id = update.effective_chat.id
+            profile, _ = Client.objects.get_or_create(chat_id=chat_id)
+            print("profile пк = ", profile)
+            order, _ = Order.objects.get_or_create(client=profile,
+                                                   defaults={
+                                                       'title': update.message.text,
+                                                   }
+                                                   )
+            keyboard = [
+                [
+                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text(
+                text="Ваш заказ успешно создан", reply_markup=reply_markup
             )
             return 'GREETINGS'
 
@@ -194,84 +414,87 @@ class Command(BaseCommand):
             query.edit_message_text(
                 text=f"Обновить {query.data}", reply_markup=reply_markup
             )
-            return 'GREETINGS'
+            return 'ORDER_BOX'
 
-        def send_field_info(update, _):
-            query = update.callback_query
-            query.edit_message_text(
-                f'Обновялем {query.data} Введите новое значение'
-            )
-            return 'UPDATE'
-
-        def update_field(update, _):
-            user = update.message.from_user
-            chat_instance = update.message.chat.id
-            logger.info("Пользователь %s рассказал: %s", user.first_name, update.message.text)
-            text = update.message.text
-            update.message.reply_text(f'Спасибо! Вы ввели {text}')
-            print(update)
-
-            return 'BACK_TO_GREETINGS'
-
-        def echo(update, context):
-            # добавим в начало полученного сообщения строку 'ECHO: '
-            text = 'ECHO: ' + update.message.text
-            # `update.effective_chat.id` - определяем `id` чата,
-            # откуда прилетело сообщение
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
-            print(update)
+        # def send_field_info(update, _):
+        #     query = update.callback_query
+        #     query.edit_message_text(
+        #         f'Обновялем {query.data} Введите новое значение'
+        #     )
+        #     return 'UPDATE'
+        #
+        # def update_field(update, _):
+        #     user = update.message.from_user
+        #     chat_instance = update.message.chat.id
+        #     logger.info("Пользователь %s рассказал: %s", user.first_name, update.message.text)
+        #     text = update.message.text
+        #     update.message.reply_text(f'Спасибо! Вы ввели {text}')
+        #     print(update)
+        #
+        #     return 'BACK_TO_GREETINGS'
+        #
+        # def echo(update, context):
+        #     # добавим в начало полученного сообщения строку 'ECHO: '
+        #     text = 'ECHO: ' + update.message.text
+        #     context.bot.send_message(chat_id=update.effective_chat.id,
+        #                              text=text)
+        #     print(update)
 
         def cancel(update, _):
-            # определяем пользователя
             user = update.message.from_user
-            # Пишем в журнал о том, что пользователь не разговорчивый
             logger.info("Пользователь %s отменил разговор.", user.first_name)
-            # Отвечаем на отказ поговорить
             update.message.reply_text(
                 'До новых встреч',
                 reply_markup=ReplyKeyboardRemove()
             )
-            # Заканчиваем разговор.
             return ConversationHandler.END
 
         conv_handler = ConversationHandler(
+            # per_message=True,
             entry_points=[CommandHandler('start', start_conversation)],
             states={
                 'GREETINGS': [
-                    CallbackQueryHandler(choose_plan, pattern='^' + str(ONE) + '$'),
                     CallbackQueryHandler(faq, pattern='to_FAQ'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
-                    CallbackQueryHandler(update_profile, pattern='to_profile'),
+                    CallbackQueryHandler(order_box, pattern='to_box_order'),
                     CallbackQueryHandler(update_form, pattern='(update_name|update_phone|update_email|update_address)'),
-                    CallbackQueryHandler(send_field_info, pattern='update_field'),
                 ],
-                'UPDATE': [
-                    MessageHandler(Filters.text & ~Filters.command, update_field)
-                ],
-                'BACK_TO_GREETINGS': [
-                    CommandHandler('start', start_conversation)
-                ],
+
                 'SHOW_INFO': [
-                    CallbackQueryHandler(faq,
-                                         pattern='(FAQ_1|FAQ_2|FAQ_3|FAQ_4|FAQ_5|address|price|schedule|contacts)'),
+                    CallbackQueryHandler(faq, pattern='(FAQ_.*|address|price|schedule|contacts)'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
-                ]
+                ],
+                'ORDER_BOX': [
+                    CallbackQueryHandler(order_box, pattern='(Привезу_сам|Заберите_бесплатно|.*weight.*|.*volume.*)'),
+                    CallbackQueryHandler(process_personal_data, pattern='personal_data_processing'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'PERSONAL_PROCCESSING': [
+                    CallbackQueryHandler(process_personal_data, pattern='personal_data_processing'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    MessageHandler(Filters.text, get_name),
+                ],
+                'GET_ADDRESS': [
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    MessageHandler(Filters.text, get_address),
+                ],
+                'GET_PHONE': [
+                    MessageHandler(Filters.text, get_phone),
+                ],
+                'GET_EMAIL': [
+                    MessageHandler(Filters.text, get_email),
+                ],
+                'GET_ITEM_LIST': [
+                    MessageHandler(Filters.text, get_item_list),
+                ],
+                'GET_ORDER_NAME': [
+                    MessageHandler(Filters.text, get_order_name),
+                ],
             },
             fallbacks=[CommandHandler('cancel', cancel)]
         )
 
         dispatcher.add_handler(conv_handler)
 
-        # echo_handler = MessageHandler(Filters.text, echo)
-        # dispatcher.add_handler(echo_handler)
-
         updater.start_polling()
         updater.idle()
-
-
-if __name__ == '__main__':
-    env = environs.Env()
-    env.read_env()
-
-    print('olol')
