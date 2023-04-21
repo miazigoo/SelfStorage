@@ -7,6 +7,7 @@ class Client(models.Model):
     name = models.CharField(max_length=40, verbose_name='Имя клиента', null=True, blank=True)
     tel_number = models.CharField(max_length=12, verbose_name='Номер телефона', null=True, blank=True, unique=True)
     email = models.EmailField(max_length=200, verbose_name='E-mail', blank=True, null=True, unique=True)
+    address = models.TextField(verbose_name='Адрес клиента', blank=True, null=True)
     created_at = models.DateTimeField(verbose_name='Создано', auto_now_add=True)
     updated_at = models.DateTimeField(verbose_name='Обновлено', auto_now=True)
     personal_data_consent = models.BooleanField(verbose_name='Согласие на ОПД', default=False)
@@ -92,14 +93,14 @@ class DeliveryStatus(models.Model):
         verbose_name_plural = 'Статусы доставки'
 
 
-delivery_types = (
-    ('in', 'на хранение'),
-    ('out', 'с хранения')
-)
+
+class DeliveryType(models.Model):
+    name = models.CharField(max_length=25, verbose_name="Тип доставки")
+
 
 
 class Delivery(models.Model):
-    type = models.CharField(max_length=10, choices=delivery_types, verbose_name='Тип доставки')
+    type = models.ForeignKey(DeliveryType, on_delete=models.CASCADE, verbose_name='Тип доставки')
     order = models.ForeignKey(Order, on_delete=models.CASCADE,
                               related_name='deliveries', verbose_name='Заказ')
     status = models.ForeignKey(DeliveryStatus, on_delete=models.CASCADE,
@@ -117,3 +118,16 @@ class Delivery(models.Model):
     class Meta:
         verbose_name = 'Доставка'
         verbose_name_plural = 'Доставки'
+
+
+class Advertisement(models.Model):
+    name = models.CharField(max_length=100, verbose_name='Рекламные кампании')
+    url = models.CharField(max_length=100, verbose_name='Короткая ссылка')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата добавления')
+
+    def __str__(self):
+        return f'{self.name}'
+
+    class Meta:
+        verbose_name = 'Рекламная кампания'
+        verbose_name_plural = 'Рекламные кампании'

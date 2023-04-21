@@ -1,4 +1,6 @@
 import logging
+import datetime
+from pytz import timezone
 from django.core.management.base import BaseCommand
 from django.conf import settings
 import environs
@@ -21,6 +23,13 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
+from bot.bitly import get_clicks
+from bot.models import (
+    Advertisement,
+    Delivery,
+    Order,
+)
+
 
 # Ведение журнала логов
 logging.basicConfig(
@@ -46,6 +55,7 @@ class Command(BaseCommand):
         tg_token = env('TG_TOKEN')
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
+        bitly_token = env('BITLY_TOKEN')
 
         def start_conversation(update, _):
             query = update.callback_query
@@ -69,13 +79,23 @@ class Command(BaseCommand):
                     text="Выберете интресующий вас вопрос", reply_markup=reply_markup
                 )
 
-            return 'GREETINGS'
-
+            return 'MAIN_MENU'
 
         def get_delivery(update, _):
             query = update.callback_query
-
-            if query.data == 'to_delivery':
+            deliveries = Delivery.objects.filter(status__id=1)
+            client_contacts = []
+            if query.data == 'to_delivery' and deliveries:
+                for delivery in deliveries:
+                    client_contact = f"""
+Заказ:{delivery.order.pk} - {delivery.type.name}
+---------------------------------------    
+Имя клиента: {delivery.order.client.name}
+Aдрес: {delivery.order.client.address}
+Номер телефона клиента: {delivery.order.client.tel_number}
+"""
+                    client_contacts.append(client_contact)
+                client_contacts = "\n".join(client_contacts)
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
@@ -83,7 +103,7 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Здесь должен быть текст, содержащий адреса и номера телефонов клиентов",
+                    text=client_contacts,
                     reply_markup=reply_markup,
                 )
 
@@ -92,7 +112,18 @@ class Command(BaseCommand):
 
         def get_expired(update, _):
             query = update.callback_query
-
+            today = datetime.datetime.now(timezone('UTC')).date()
+            orders = Order.objects.filter(end_storage_date__isnull=True, paid_up_to__lt=today)
+            client_contacts = []
+            for order in orders:
+                client_contact = f"""
+Заказ:{order.pk} - {(today - order.paid_up_to).days} дней просрочки
+---------------------------------------    
+Имя клиента: {order.client.name}
+Номер телефона клиента: {order.client.tel_number}
+"""
+                client_contacts.append(client_contact)
+            client_contacts = "\n".join(client_contacts)
             if query.data == 'to_expired':
                 keyboard = [
                     [
@@ -101,14 +132,12 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Здесь должен быть текст,\
-                     содержащий список просроченных заказов с именами и номерами телефонов владельцев боксов",
+                    text=client_contacts,
                     reply_markup=reply_markup,
                 )
 
             query.answer()
             return 'EXPIRED'
-
 
         def show_ad(update, _):
             query = update.callback_query
@@ -127,16 +156,16 @@ class Command(BaseCommand):
                 text="Выберите, что Вы хотите сделать", reply_markup=reply_markup
             )
             query.answer()
-            return 'AD'
+            return 'SHOW_AD'
 
         def show_stat(update, _):
             query = update.callback_query
             print(query.data)
-            campaigns = ['Кампания 1', 'Кампания 2']
+            campaigns = Advertisement.objects.all()
             campaigns_keyboard = []
-            for i, campaign in enumerate(campaigns):
-                callback_data = f"stat_{i}"
-                campaigns_keyboard.append([InlineKeyboardButton(campaign, callback_data=callback_data)])
+            for campaign in campaigns:
+                callback_data = f"stat_{campaign.pk}"
+                campaigns_keyboard.append([InlineKeyboardButton(campaign.name, callback_data=callback_data)])
 
             to_start_keyboard = [
                  [
@@ -153,21 +182,20 @@ class Command(BaseCommand):
             stat_markup = InlineKeyboardMarkup(to_stat_keyboard)
             query.answer()
 
-            stat_info = ['Статистика по компании 1', 'Статистика по компании 2']
-
             if query.data == 'to_stat':
                 query.edit_message_text(
                     text="Выберите компанию, по которой хотите узнать статистику:", reply_markup=campaigns_markup
                 )
 
             if query.data.startswith('stat_'):
-                index = int(query.data.split('_')[1])
+                ad_pk = int(query.data.split('_')[1])
+                url = Advertisement.objects.get(pk=ad_pk).url
+                text = get_clicks(url, bitly_token)
                 query.edit_message_text(
-                    text=stat_info[index], reply_markup=stat_markup
+                    text=text, reply_markup=stat_markup
                 )
 
             return 'SHOW_STAT'
-
 
         def add_new_campaign(update, _):
             query = update.callback_query
@@ -179,28 +207,61 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(
-                text="В ответном сообщении укажите название новой кампании", reply_markup=reply_markup
+                text="В ответном сообщении введите ссылку, по которой будете просматривать статистику кампании",
+                reply_markup=reply_markup,
             )
-            return 'GET_NAME'
-
-        def get_name(update, context):
-            text = 'Вы ввели: ' + update.message.text + '\nВведите ссылку, по которой будете просматривать статистику'
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
             return 'GET_URL'
 
         def get_url(update, context):
+            url = update.message.text
+            ad, created = Advertisement.objects.get_or_create(
+                url=url,
+            )
+            if not created:
+                callback_data = f'stat_{ad.pk}'
+                keyword = [
+                    [
+                        InlineKeyboardButton("Посмотреть", callback_data=callback_data),
+                        InlineKeyboardButton("Изменить ссылку", callback_data="add_new_campaign"),
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyword)
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text="Такая ссылка уже есть в списке кампаний", reply_markup=reply_markup)
+
+                return 'CHECK_URL'
+            else:
+                context.user_data['ad_pk'] = ad.pk
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Назад", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                text = 'Вы ввели ссылку: ' + update.message.text + '\nВведите название кампании:'
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text=text, reply_markup=reply_markup)
+
+                return 'GET_NAME'
+
+        def get_name(update, context):
+            name = update.message.text
+            ad_pk = context.user_data.get('ad_pk')
+            print(ad_pk)
+            ad = Advertisement.objects.get(pk=ad_pk)
+            ad.name = name
+            ad.save()
             keyboard = [
                 [
-                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                    InlineKeyboardButton("На главный", callback_data="to_start"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            text = 'Вы ввели: ' + update.message.text + '\nИнформация о кампании добавлена в БД'
+            text = 'Вы ввели: ' + update.message.text + '\nНовая кампания успешно добавлена в базу данных'
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text, reply_markup=reply_markup)
-
-            return 'GREETINGS'
+            return 'MAIN_MENU'
 
 
         def cancel(update, _):
@@ -216,14 +277,19 @@ class Command(BaseCommand):
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('start', start_conversation)],
             states={
-                'GREETINGS': [
+                'MAIN_MENU': [
                     CallbackQueryHandler(show_ad, pattern='to_ad'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(get_delivery, pattern='to_delivery'),
                     CallbackQueryHandler(get_expired, pattern='to_expired'),
                 ],
-                'AD': [
+                'SHOW_AD': [
                     CallbackQueryHandler(show_stat, pattern='to_stat'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                    CallbackQueryHandler(add_new_campaign, pattern='add_new_campaign'),
+                ],
+                'CHECK_URL': [
+                    CallbackQueryHandler(show_stat, pattern='(stat_.*)'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(add_new_campaign, pattern='add_new_campaign'),
                 ],
