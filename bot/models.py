@@ -13,7 +13,6 @@ class Client(models.Model):
     personal_data_consent = models.BooleanField(verbose_name='Согласие на ОПД', default=False)
     personal_data_consent_date = models.DateTimeField(auto_now_add=True,
                                                       verbose_name='Дата согласия на ОПД', blank=True, null=True)
-    address = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f'#{self.pk} {self.name} {self.nickname}'
@@ -133,3 +132,5 @@ class Advertisement(models.Model):
     class Meta:
         verbose_name = 'Рекламная кампания'
         verbose_name_plural = 'Рекламные кампании'
+
+
