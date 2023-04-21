@@ -12,6 +12,7 @@ class Client(models.Model):
     personal_data_consent = models.BooleanField(verbose_name='Согласие на ОПД', default=False)
     personal_data_consent_date = models.DateTimeField(auto_now_add=True,
                                                       verbose_name='Дата согласия на ОПД', blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f'#{self.pk} {self.name} {self.nickname}'
@@ -59,6 +60,7 @@ class Order(models.Model):
     weight = models.CharField(max_length=50, verbose_name='Вес', null=True, blank=True)
     size = models.CharField(max_length=50, verbose_name='Размер', null=True, blank=True)
     things = models.TextField(max_length=50, verbose_name='Список вещей', null=True, blank=True)
+    title = models.CharField(max_length=200, verbose_name='Название заказа', null=True, blank=True)
 
     def get_description(self):
         if self.things:
