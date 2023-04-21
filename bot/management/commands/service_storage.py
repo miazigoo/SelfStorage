@@ -47,6 +47,7 @@ class Command(BaseCommand):
         updater = Updater(token=tg_token)
 
         dispatcher = updater.dispatcher
+        profile_order = {}
 
         def start_conversation(update, _):
             query = update.callback_query
@@ -78,6 +79,10 @@ class Command(BaseCommand):
         def send_ful_name(update, context):
             chat_id = update.message.chat_id
             text = update.message.text
+            profile_order[chat_id] = {
+                    'nickname': update.message.from_user.username,
+                    'name': text,
+                }
 
             profile, _ = Client.objects.get_or_create(
                 chat_id=chat_id,
@@ -92,6 +97,7 @@ class Command(BaseCommand):
             return 'PHONE_NUBER'
 
         def send_phone_number(update, _):
+            print(profile_order)
             chat_id = update.message.chat_id
             text = update.message.text
 
