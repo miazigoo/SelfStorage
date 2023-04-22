@@ -1,10 +1,12 @@
 import logging
+import random
+
 from django.core.management.base import BaseCommand
 from phonenumbers import is_valid_number, parse
 from SelfStorage import settings
 import environs
 import re
-from bot.models import (Client, Order, Storage,DeliveryType,
+from bot.models import (Client, Order, Storage, DeliveryType,
                         DeliveryStatus, Delivery, Box)
 from telegram import (
     InlineKeyboardButton,
@@ -20,13 +22,13 @@ from telegram.ext import (
     ConversationHandler,
 )
 
-
 # Ведение журнала логов
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
 )
 
 logger = logging.getLogger(__name__)
+
 
 def step_count():
     step = 1
