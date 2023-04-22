@@ -11,7 +11,7 @@ from bot.models import (Client, Order, Storage, DeliveryType,
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    ReplyKeyboardRemove,
+    ReplyKeyboardRemove, ParseMode,
 )
 from telegram.ext import (
     Updater,
@@ -38,6 +38,9 @@ def step_count():
 
 
 step_counter = step_count()
+
+with open('bot/hello.txt', encoding="utf-8", mode='r') as file:
+    start_text = file.read()
 
 
 def calculate_price(weight, size):
@@ -106,7 +109,7 @@ class Command(BaseCommand):
         env = environs.Env()
         env.read_env()
         tg_token = env('TG_TOKEN')
-        #tg_token = settings.tg_token
+        # tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
 
@@ -125,11 +128,13 @@ class Command(BaseCommand):
 
             if query:
                 query.edit_message_text(
-                    text="Выберете интересующий вопрос", reply_markup=reply_markup
+                    text=f"{start_text}\nВыберете интересующий вопрос", reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
                 )
             else:
                 update.message.reply_text(
-                    text="Выберете интересующий вас вопрос", reply_markup=reply_markup
+                    text=f"{start_text}\nВыберете интересующий вас вопрос", reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
                 )
 
             return 'GREETINGS'
@@ -165,8 +170,8 @@ class Command(BaseCommand):
                 )
             else:
                 query.edit_message_text(
-                        text=FAQ_ANSWERS[query.data], reply_markup=reply_markup
-                    )
+                    text=FAQ_ANSWERS[query.data], reply_markup=reply_markup
+                )
             return 'SHOW_INFO'
 
         def order_box(update, context):
@@ -553,6 +558,8 @@ class Command(BaseCommand):
         )
 
         dispatcher.add_handler(conv_handler)
+        start_handler = CommandHandler('start', start_conversation)
+        dispatcher.add_handler(start_handler)
 
         updater.start_polling()
         updater.idle()
