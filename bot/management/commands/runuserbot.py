@@ -1,5 +1,7 @@
+import datetime
 import logging
 import random
+
 import qrcode
 from os import remove
 from bot.faq_answers import FAQ_ANSWERS
@@ -518,6 +520,11 @@ class Command(BaseCommand):
         def process_delivery(update, context):
             print(context.user_data)
             query = update.callback_query
+            chat_id = update.effective_chat.id
+            close_time = datetime.date.today()
+            client = Client.objects.filter(chat_id=chat_id)[0]
+            order_pk = context.user_data['order_pk']
+            order = Order.objects.get(pk=order_pk)
             if query:
                 query.answer()
 
@@ -551,9 +558,10 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 context.bot.send_message(
-                    text=f'''Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса.
-                           Если хотел вернуть обратно: Вы можете в любой момент вернуть вещи обратно на хранение. Для этого Вы можете либо самостоятельно привезти их нам, либо заказать доставку.
-                     ''',
+                    text=f'Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. ' \
+                         'Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса. ' \
+                         'Если хотел вернуть обратно: Вы можете в любой момент вернуть вещи обратно на хранение. ' \
+                         'Для этого Вы можете либо самостоятельно привезти их нам, либо заказать доставку.',
                     chat_id=update.effective_chat.id,
                     reply_markup=reply_markup
                 )
@@ -568,9 +576,12 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Вы хотите, чтобы мы привезли Вам вещи по адресу <адрес> за N рублей?",
+                    text=f"Вы хотите, чтобы мы привезли Вам вещи по адресу {client.address} за 12 рублей/километр?",
                     reply_markup=reply_markup
                 )
+            if query.data == "Насовсем":
+                order.end_storage_date = close_time
+                order.save()
             if query.data == "accept":
                 keyboard = [
                     [
@@ -579,7 +590,8 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text=f'''Ваш заказ №<номер заказа> на доставку успешно сформирован! В ближайшее время с Вами свяжется наш специалист для уточнения времени доставки.''',
+                    text=f'Ваш заказ №{order_pk} на доставку успешно сформирован! ' \
+                         'В ближайшее время с Вами свяжется наш специалист для уточнения времени доставки.',
                     reply_markup=reply_markup
                 )
 
