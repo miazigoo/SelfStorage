@@ -521,8 +521,8 @@ class Command(BaseCommand):
         def process_delivery(update, context):
             print(context.user_data)
             query = update.callback_query
-            query.answer()
-            print(query.data)
+            if query:
+                query.answer()
 
             if re.match(r'.*_delivery$', query.data):
                 context.user_data['self_delivery'] = False
@@ -546,20 +546,20 @@ class Command(BaseCommand):
 
             if context.user_data['self_delivery'] and (query.data == "Насовсем" or query.data == "Верну"):
                 storage = Storage.objects.all()[0]
+                send_qr(update, updater)
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
                     ]
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                query.edit_message_text(
+                context.bot.send_message(
                     text=f'''Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса.
                            Если хотел вернуть обратно: Вы можете в любой момент вернуть вещи обратно на хранение. Для этого Вы можете либо самостоятельно привезти их нам, либо заказать доставку.
                      ''',
+                    chat_id=update.effective_chat.id,
                     reply_markup=reply_markup
                 )
-
-                send_qr(update, updater)
 
             if not context.user_data['self_delivery'] and (query.data == "Насовсем" or query.data == "Верну"):
                 keyboard = [
