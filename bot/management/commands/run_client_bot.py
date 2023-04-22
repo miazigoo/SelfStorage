@@ -46,36 +46,28 @@ step_counter = step_count()
 
 def calculate_price(weight, size):
     start_price = 750
-    weight_cof = None
-    size_cof = None
     all_weight_cof = {
-        'weight_le_10_cof': 0.7,
-        'weight_10to25_cof': 0.9,
-        'weight_25to50_cof': 1.1,
-        'weight_50to75_cof': 1.3,
-        'weight_ge_70_cof': 1.6,
+        'weight_le_10': 0.7,
+        'weight_10to25': 0.9,
+        'weight_25to50': 1.1,
+        'weight_50to75': 1.3,
+        'weight_ge_70': 1.6,
     }
     all_size_cof = {
         'volume_le_1': 0.5,
         'volume_1to3': 0.9,
         'volume_3to7': 1.2,
         'volume_7to10': 1.6,
-        'volume_ge_10': 2
+        'volume_ge_10': 2,
     }
     if weight in all_weight_cof:
         weight_cof = all_weight_cof[weight]
+    else:
+        weight_cof = 0.7
 
     if size in all_size_cof:
         size_cof = all_size_cof[size]
-
-    if weight_cof is None:
-        weight_cof = 0.7
-
-    if size_cof is None:
-        size_cof = 0.5
-
-    if weight_cof is None and size_cof is None:
-        weight_cof = 0.7
+    else:
         size_cof = 0.5
 
     month_price = (start_price * weight_cof + start_price * size_cof)
@@ -84,8 +76,6 @@ def calculate_price(weight, size):
 
 
 def value_from_data(weight, size):
-    weight_value = None
-    size_value = None
     all_weight = {
         'weight_le_10': "до 10кг",
         'weight_10to25': "10-25кг",
@@ -98,18 +88,16 @@ def value_from_data(weight, size):
         'volume_1to3': "1 - 3 куб.м",
         'volume_3to7': "3 - 7 куб.м",
         'volume_7to10': "7 - 10 куб.м",
-        'volume_ge_10': "более 10 куб.м"
+        'volume_ge_10': "более 10 куб.м",
     }
     if weight in all_weight:
         weight_value = all_weight[weight]
+    else:
+        weight_value = "Необходимо замерить"
 
     if size in all_size:
         size_value = all_size[size]
-
-    if not weight in all_weight:
-        weight_value = "Необходимо замерить"
-
-    if not size in all_size:
+    else:
         size_value = "Необходимо замерить"
 
     return weight_value, size_value
@@ -133,7 +121,7 @@ class Command(BaseCommand):
                 [
                     InlineKeyboardButton("FAQ", callback_data='to_FAQ'),
                     InlineKeyboardButton("Заказать Бокс", callback_data="to_box_order"),
-                    InlineKeyboardButton("Мои Боксы", callback_data="Мои Боксы"),
+                    InlineKeyboardButton("Мои Боксы", callback_data="to_my_orders"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -257,8 +245,6 @@ class Command(BaseCommand):
                     text="Знаете ли Вы вес своих вещей?", reply_markup=reply_markup
                 )
             if query.data == 'choose_weight':
-                choose_weight = query.data
-                context.user_data['choose_weight'] = choose_weight
                 keyboard = [
                     [
                         InlineKeyboardButton("до 10кг", callback_data="weight_le_10"),
@@ -276,8 +262,9 @@ class Command(BaseCommand):
                     text="Выберите вес", reply_markup=reply_markup
                 )
 
-            if query.data == "weight_le_10" or "weight_10to25" or 'weight_25to50' or \
-                    'weight_50to75' or "weight_ge_70" in query.data:
+            if query.data == "weight_le_10" or query.data == "weight_10to25" \
+                    or query.data == 'weight_25to50' or query.data == 'weight_50to75' \
+                    or query.data == "weight_ge_70":
                 weight = query.data
                 context.user_data['weight'] = weight
 
@@ -296,8 +283,6 @@ class Command(BaseCommand):
                     text="Знаете ли объем ваших вещей", reply_markup=reply_markup
                 )
             if query.data == 'choose_volume':
-                choose_volume = query.data
-                context.user_data['choose_volume'] = choose_volume
                 keyboard = [
                     [
                         InlineKeyboardButton("менее 1 куб.м", callback_data="volume_le_1"),
@@ -315,8 +300,8 @@ class Command(BaseCommand):
                     text="Выберите объем", reply_markup=reply_markup
                 )
 
-            if query.data == "volume_le_1" or "volume_1to3" or 'volume_3to7' or \
-                    'volume_7to10' or "volume_ge_10" in query.data:
+            if query.data == "volume_le_1" or query.data == "volume_1to3" or query.data == 'volume_3to7' \
+                    or query.data == 'volume_7to10' or query.data == "volume_ge_10":
                 size = query.data
                 context.user_data['size'] = size
 
@@ -356,8 +341,6 @@ class Command(BaseCommand):
 
         def process_personal_data(update, context):
             query = update.callback_query
-            personal_data_consent_date = True
-            context.user_data['personal_data_consent_date'] = personal_data_consent_date
             query.answer()
             keyboard = [
                 [
@@ -428,7 +411,9 @@ class Command(BaseCommand):
             title = update.message.text
             size = context.user_data.get('size')
             weight = context.user_data.get('weight')
+            print('weight = context.user_data.get(weight)', weight)
             weight_value, size_value = value_from_data(weight, size)
+
             type_delivery = context.user_data.get('type_delivery')
             nickname = context.user_data.get('nickname')
             name = context.user_data.get('name')
@@ -439,7 +424,6 @@ class Command(BaseCommand):
 
             all_box = Box.objects.all()
             random_box = random.choice(all_box)
-            print('random_box = ', random_box)
             profile, _ = Client.objects.get_or_create(chat_id=chat_id,
                                                       defaults={
                                                           'nickname': nickname,
@@ -468,6 +452,70 @@ class Command(BaseCommand):
                 text="Ваш заказ успешно создан", reply_markup=reply_markup
             )
             return 'GREETINGS'
+
+        def show_my_orders(update, context):
+            query = update.callback_query
+            chat_id = update.effective_chat.id
+            orders = Order.objects.filter(end_storage_date__isnull=True, client__chat_id=chat_id)
+            print(orders)
+            print(chat_id)
+            query.answer()
+
+            if query.data == 'to_my_orders':
+                if not orders:
+                    keyboard = [
+                        [
+                            InlineKeyboardButton("Заказать Бокс", callback_data="to_box_order"),
+                            InlineKeyboardButton("На главный", callback_data="to_start"),
+                        ]
+                    ]
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    query.edit_message_text(
+                        text="У нас еще нет Ваших вещей на хранении", reply_markup=reply_markup
+                    )
+                else:
+                    orders_keyboard = []
+                    for order in orders:
+                        callback_data = f"order_{order.pk}"
+                        orders_keyboard.append([InlineKeyboardButton(order.title, callback_data=callback_data)])
+
+                    to_start_keyboard = [
+                        [
+                            InlineKeyboardButton("На главный", callback_data="to_start"),
+                        ]
+                    ]
+                    orders_markup = InlineKeyboardMarkup(orders_keyboard + to_start_keyboard)
+                    query.edit_message_text(
+                        text=f"У вас есть {len(orders)} боксов. Выберите нужный", reply_markup=orders_markup
+                    )
+
+            if query.data.startswith('order_'):
+                order_pk = int(query.data.split('_')[1])
+                context.user_data['order_pk'] = order_pk
+                order_keyboard = [
+                    [
+                        InlineKeyboardButton("Забрать вещи", callback_data="take_things"),
+                        InlineKeyboardButton("Список вещей", callback_data="list_things"),
+                    ],
+                    [
+                        InlineKeyboardButton("Забыл забрать! Что делать?", callback_data="list_things"),
+                    ],
+                    [
+                        InlineKeyboardButton("Включить напоминания", callback_data="list_things"),
+                    ]
+                ]
+                to_orders_keyboard = [
+                    [
+                        InlineKeyboardButton("Заказы", callback_data="to_my_orders"),
+                        InlineKeyboardButton("На главный", callback_data="to_start"),
+                    ]
+                ]
+                order_markup = InlineKeyboardMarkup(order_keyboard + to_orders_keyboard)
+                query.edit_message_text(
+                    text="Что Вы хотите сделать?", reply_markup=order_markup
+                )
+
+            return 'SHOW_ORDERS'
 
         def update_form(update, _):
             query = update.callback_query
@@ -500,11 +548,17 @@ class Command(BaseCommand):
                     CallbackQueryHandler(faq, pattern='to_FAQ'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(order_box, pattern='to_box_order'),
+                    CallbackQueryHandler(show_my_orders, pattern='to_my_orders'),
                     CallbackQueryHandler(update_form, pattern='(update_name|update_phone|update_email|update_address)'),
                 ],
 
                 'SHOW_INFO': [
                     CallbackQueryHandler(faq, pattern='(FAQ_.*|address|price|schedule|contacts)'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+                ],
+                'SHOW_ORDERS': [
+                    CallbackQueryHandler(show_my_orders, pattern='to_my_orders|order_.*'),
+                    CallbackQueryHandler(order_box, pattern='to_box_order'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'ORDER_BOX': [
