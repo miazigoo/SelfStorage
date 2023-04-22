@@ -6,7 +6,6 @@ from bot.faq_answers import FAQ_ANSWERS
 from django.core.management.base import BaseCommand
 from phonenumbers import is_valid_number, parse
 from SelfStorage import settings
-import environs
 import re
 from bot.models import (Client, Order, Storage, DeliveryType,
                         DeliveryStatus, Delivery, Box)
@@ -30,6 +29,7 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
 
 def send_qr(update, updater):
     chat_id = update.callback_query.message.chat.id
@@ -117,10 +117,7 @@ class Command(BaseCommand):
     help = 'Телеграм-бот'
 
     def handle(self, *args, **kwargs):
-        env = environs.Env()
-        env.read_env()
-        tg_token = env('TG_TOKEN')
-        # tg_token = settings.tg_token
+        tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
 

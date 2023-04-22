@@ -1,5 +1,4 @@
-from bot.models import (Client, Order, Storage, DeliveryType,
-                        DeliveryStatus, Delivery, Box)
+from bot.models import Storage
 
 storage = Storage.objects.all()[0]
 
