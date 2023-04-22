@@ -1,5 +1,7 @@
 import logging
 import random
+import qrcode
+from os import remove
 from bot.faq_answers import FAQ_ANSWERS
 from django.core.management.base import BaseCommand
 from phonenumbers import is_valid_number, parse
@@ -28,6 +30,15 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+def send_qr(update, updater):
+    chat_id = update.callback_query.message.chat.id
+    img_name = f"tmp_qr_{chat_id}.png"
+    img = qrcode.make(chat_id)
+    img.save(img_name)
+    with open(img_name, 'rb') as qr:
+        updater.bot.send_photo(chat_id=chat_id, photo=qr)
+    remove(img_name)
 
 
 def step_count():
@@ -542,6 +553,9 @@ class Command(BaseCommand):
                      ''',
                     reply_markup=reply_markup
                 )
+
+                send_qr(update, updater)
+
             if not context.user_data['self_delivery'] and (query.data == "Насовсем" or query.data == "Верну"):
                 keyboard = [
                     [
