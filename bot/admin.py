@@ -31,3 +31,8 @@ class DeliveryStatusAdmin(admin.ModelAdmin):
 @admin.register(Delivery)
 class DeliveryAdmin(admin.ModelAdmin):
     list_display = ['type', 'order']
+
+
+@admin.register(DeliveryType)
+class DeliveryTypeAdmin(admin.ModelAdmin):
+    list_display = ['name']

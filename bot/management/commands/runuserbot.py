@@ -1,18 +1,15 @@
 import logging
 from django.core.management.base import BaseCommand
 from phonenumbers import is_valid_number, parse
-from django.conf import settings
+from SelfStorage import settings
 import environs
 import re
+from bot.models import (Client, Order, Storage,DeliveryType,
+                        DeliveryStatus, Delivery, Box)
 from telegram import (
-    InlineQueryResultArticle,
-    InputTextMessageContent,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    Update,
     ReplyKeyboardRemove,
-    ReplyKeyboardMarkup,
-    CallbackQuery
 )
 from telegram.ext import (
     Updater,
@@ -22,9 +19,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
-from bot.models import (
-    Order,
-)
+
 
 # Ведение журнала логов
 logging.basicConfig(
@@ -39,7 +34,68 @@ def step_count():
         yield step
         step = step + 1
 
+
 step_counter = step_count()
+
+
+def calculate_price(weight, size):
+    start_price = 750
+    all_weight_cof = {
+        'weight_le_10': 0.7,
+        'weight_10to25': 0.9,
+        'weight_25to50': 1.1,
+        'weight_50to75': 1.3,
+        'weight_ge_70': 1.6,
+    }
+    all_size_cof = {
+        'volume_le_1': 0.5,
+        'volume_1to3': 0.9,
+        'volume_3to7': 1.2,
+        'volume_7to10': 1.6,
+        'volume_ge_10': 2,
+    }
+    if weight in all_weight_cof:
+        weight_cof = all_weight_cof[weight]
+    else:
+        weight_cof = 0.7
+
+    if size in all_size_cof:
+        size_cof = all_size_cof[size]
+    else:
+        size_cof = 0.5
+
+    month_price = (start_price * weight_cof + start_price * size_cof)
+    half_year_price = month_price * 6
+    return month_price, half_year_price
+
+
+def value_from_data(weight, size):
+    all_weight = {
+        'weight_le_10': "до 10кг",
+        'weight_10to25': "10-25кг",
+        'weight_25to50': "25-50кг",
+        'weight_50to75': "50-75кг",
+        'weight_ge_70': "75кг+",
+    }
+    all_size = {
+        'volume_le_1': "менее 1 куб.м",
+        'volume_1to3': "1 - 3 куб.м",
+        'volume_3to7': "3 - 7 куб.м",
+        'volume_7to10': "7 - 10 куб.м",
+        'volume_ge_10': "более 10 куб.м",
+    }
+    if weight in all_weight:
+        weight_value = all_weight[weight]
+    else:
+        weight_value = "Необходимо замерить"
+
+    if size in all_size:
+        size_value = all_size[size]
+    else:
+        size_value = "Необходимо замерить"
+
+    return weight_value, size_value
+
 
 class Command(BaseCommand):
     help = 'Телеграм-бот'
@@ -47,7 +103,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         env = environs.Env()
         env.read_env()
-        tg_token = env('TG_TOKEN')
+        tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
 
@@ -70,14 +126,13 @@ class Command(BaseCommand):
                 )
             else:
                 update.message.reply_text(
-                    text="Выберете интресующий вас вопрос", reply_markup=reply_markup
+                    text="Выберете интересующий вас вопрос", reply_markup=reply_markup
                 )
 
             return 'GREETINGS'
 
         def faq(update, _):
             query = update.callback_query
-            print(query.data)
 
             keyboard = [
                 [
@@ -146,10 +201,11 @@ class Command(BaseCommand):
                 )
             return 'SHOW_INFO'
 
-        def order_box(update, _):
+        def order_box(update, context):
             query = update.callback_query
 
             if query.data == 'to_box_order':
+                storage = Storage.objects.all()[0]
                 keyboard = [
                     [
                         InlineKeyboardButton("Привезу сам", callback_data="Привезу_сам"),
@@ -161,9 +217,14 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Для заказа бокса,пожалуйста, выберите, как удобнее передать вещи:", reply_markup=reply_markup
+                    text=f"Наш склад {storage.name} находится по адресу:\n" +
+                         f"{storage.address}\n" +
+                         'Для заказа бокса,пожалуйста, выберите, как удобнее передать вещи:',
+                    reply_markup=reply_markup
                 )
             if query.data == 'Привезу_сам' or query.data == 'Заберите_бесплатно':
+                type_delivery = query.data
+                context.user_data['type_delivery'] = type_delivery
                 keyboard = [
                     [
                         InlineKeyboardButton("Укажите вес", callback_data="choose_weight"),
@@ -180,7 +241,7 @@ class Command(BaseCommand):
             if query.data == 'choose_weight':
                 keyboard = [
                     [
-                        InlineKeyboardButton("до 10 кг", callback_data="weight_le_10"),
+                        InlineKeyboardButton("до 10кг", callback_data="weight_le_10"),
                         InlineKeyboardButton("10-25кг", callback_data="weight_10to25"),
                         InlineKeyboardButton("25-50кг", callback_data="weight_25to50"),
                     ],
@@ -194,6 +255,13 @@ class Command(BaseCommand):
                 query.edit_message_text(
                     text="Выберите вес", reply_markup=reply_markup
                 )
+
+            if query.data == "weight_le_10" or query.data == "weight_10to25" \
+                    or query.data == 'weight_25to50' or query.data == 'weight_50to75' \
+                    or query.data == "weight_ge_70":
+                weight = query.data
+                context.user_data['weight'] = weight
+
             if query.data == 'no_weight_info' or 'weight_' in query.data:
                 keyboard = [
                     [
@@ -211,8 +279,8 @@ class Command(BaseCommand):
             if query.data == 'choose_volume':
                 keyboard = [
                     [
-                        InlineKeyboardButton("менее 1 куб.м ", callback_data="volume_le_1"),
-                        InlineKeyboardButton("1 - 3 куб.м ", callback_data="volume_1to3"),
+                        InlineKeyboardButton("менее 1 куб.м", callback_data="volume_le_1"),
+                        InlineKeyboardButton("1 - 3 куб.м", callback_data="volume_1to3"),
                         InlineKeyboardButton("3 - 7 куб.м", callback_data="volume_3to7"),
                     ],
                     [
@@ -225,6 +293,12 @@ class Command(BaseCommand):
                 query.edit_message_text(
                     text="Выберите объем", reply_markup=reply_markup
                 )
+
+            if query.data == "volume_le_1" or query.data == "volume_1to3" or query.data == 'volume_3to7' \
+                    or query.data == 'volume_7to10' or query.data == "volume_ge_10":
+                size = query.data
+                context.user_data['size'] = size
+
             if re.match("^volume_", query.data) or query.data == 'no_volume_info' or query.data == 'no_weight_info':
                 keyboard = [
                     [
@@ -237,10 +311,17 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 if re.match("^volume_", query.data):
+                    size = context.user_data.get('size')
+                    weight = context.user_data.get('weight')
+                    month_price, half_year_price = calculate_price(weight, size)
+                    text = "Спасибо за оформление заказа.\n" \
+                           "Примерная стоимость на 1 календарный месяц " \
+                           f"составляет {month_price} RUB.\n" \
+                           f"Примерная стоимость на пол года {half_year_price} RUB.\n" \
+                           "Чтобы продолжить оформление в соответствии с законодательством " \
+                           "нам нужно Ваше согласие на обработку персональный данных"
                     query.edit_message_text(
-                        text='''Спасибо за оформление заказа. Примерная стоимость составляет ХХ.
-                              Чтобы продолжить оформление в соответствии с законодательством 
-                             нам нужно Ваше согласие на обработку персональный данных ''', reply_markup=reply_markup
+                        text=text, reply_markup=reply_markup
                     )
                 else:
                     query.edit_message_text(
@@ -249,11 +330,10 @@ class Command(BaseCommand):
                                 нам нужно Ваше согласие на обработку персональный данных ''',
                         reply_markup=reply_markup
                     )
-
             query.answer()
             return 'ORDER_BOX'
 
-        def process_personal_data(update, _):
+        def process_personal_data(update, context):
             query = update.callback_query
             query.answer()
             keyboard = [
@@ -268,42 +348,94 @@ class Command(BaseCommand):
             return 'PERSONAL_PROCCESSING'
 
         def get_name(update, context):
-            text = 'Вы ввели: ' + update.message.text + 'Введите адрес'
+            chat_id = update.message.chat_id
+            nickname = update.message.from_user.username
+            name = update.message.text
+            context.user_data['chat_id'] = chat_id
+            context.user_data['nickname'] = nickname
+            context.user_data['name'] = name
+
+            text = '✅ Ув. {}\n\n<b>Введите ваш адрес</b> '.format(update.message.text)
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text)
             return 'GET_ADDRESS'
 
         def get_address(update, context):
-            text = 'ECHO: ' + update.message.text + 'Введите телефон'
+            address = update.message.text
+            context.user_data['address'] = address
+
+            text = '<b>Введите номер телефона:</b>'
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text)
             return 'GET_PHONE'
 
         def get_phone(update, context):
-            phonenumber = update.message.text
-            if is_valid_number(parse(phonenumber, 'RU')):
-                text = 'ECHO: ' + update.message.text + 'Введите email'
+            phone_number = update.message.text
+            if is_valid_number(parse(phone_number, 'RU')):
+                context.user_data['phone_number'] = phone_number
+                text = '<b>Введите email</b>'
                 context.bot.send_message(chat_id=update.effective_chat.id,
                                          text=text)
                 return 'GET_EMAIL'
             else:
                 context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text='Введите коректный номер')
+                                         text='Введите корректный номер')
                 return 'GET_PHONE'
 
         def get_email(update, context):
-            text = 'ECHO: ' + update.message.text + 'Введите список вещей'
+            email = update.message.text
+            context.user_data['email'] = email
+            text = 'ECHO: ' + update.message.text + '<b> Введите список вещей в одном сообщении</b>'
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text)
             return 'GET_ITEM_LIST'
 
         def get_item_list(update, context):
-            text = 'ECHO: ' + update.message.text + 'Назовите заказ'
+            things = update.message.text
+            context.user_data['things'] = things
+            text = 'ECHO: ' + update.message.text + ' Назовите заказ \n' \
+                                                    'Например, зимние куртки ' \
+                                                    'или Спорт инвентарь'
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=text)
             return 'GET_ORDER_NAME'
 
-        def get_order_name(update, _):
+        def get_order_name(update, context):
+            chat_id = update.effective_chat.id
+            title = update.message.text
+            size = context.user_data.get('size')
+            weight = context.user_data.get('weight')
+            weight_value, size_value = value_from_data(weight, size)
+
+            type_delivery = context.user_data.get('type_delivery')
+            nickname = context.user_data.get('nickname')
+            name = context.user_data.get('name')
+            phone_number = context.user_data.get('phone_number')
+            address = context.user_data.get('address')
+            email = context.user_data.get('email')
+            things = context.user_data.get('things')
+
+            all_box = Box.objects.all()
+            random_box = random.choice(all_box)
+            profile, _ = Client.objects.get_or_create(chat_id=chat_id,
+                                                      defaults={
+                                                          'nickname': nickname,
+                                                          'name': name,
+                                                          'address': address,
+                                                          'email': email,
+                                                          'tel_number': phone_number,
+                                                          'personal_data_consent': True
+                                                      })
+            order = Order.objects.create(
+                client=profile,
+                weight=weight_value,
+                size=size_value,
+                things=things,
+                title=title,
+                box=random_box,
+            )
+            delivery_type = DeliveryType.objects.get_or_create(name=type_delivery)
+
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
@@ -374,11 +506,10 @@ class Command(BaseCommand):
                 ]
                 order_markup = InlineKeyboardMarkup(order_keyboard + to_orders_keyboard)
                 query.edit_message_text(
-                        text="Что Вы хотите сделать?", reply_markup=order_markup
-                    )
+                    text="Что Вы хотите сделать?", reply_markup=order_markup
+                )
 
             return 'SHOW_ORDERS'
-
 
         def update_form(update, _):
             query = update.callback_query
@@ -395,31 +526,6 @@ class Command(BaseCommand):
             )
             return 'ORDER_BOX'
 
-        # def send_field_info(update, _):
-        #     query = update.callback_query
-        #     query.edit_message_text(
-        #         f'Обновялем {query.data} Введите новое значение'
-        #     )
-        #     return 'UPDATE'
-        #
-        # def update_field(update, _):
-        #     user = update.message.from_user
-        #     chat_instance = update.message.chat.id
-        #     logger.info("Пользователь %s рассказал: %s", user.first_name, update.message.text)
-        #     text = update.message.text
-        #     update.message.reply_text(f'Спасибо! Вы ввели {text}')
-        #     print(update)
-        #
-        #     return 'BACK_TO_GREETINGS'
-        #
-        # def echo(update, context):
-        #     # добавим в начало полученного сообщения строку 'ECHO: '
-        #     text = 'ECHO: ' + update.message.text
-        #     context.bot.send_message(chat_id=update.effective_chat.id,
-        #                              text=text)
-        #     print(update)
-
-
         def cancel(update, _):
             user = update.message.from_user
             logger.info("Пользователь %s отменил разговор.", user.first_name)
@@ -428,7 +534,6 @@ class Command(BaseCommand):
                 reply_markup=ReplyKeyboardRemove()
             )
             return ConversationHandler.END
-
 
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('start', start_conversation)],
@@ -441,7 +546,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(update_form, pattern='(update_name|update_phone|update_email|update_address)'),
                 ],
 
-                'SHOW_INFO':[
+                'SHOW_INFO': [
                     CallbackQueryHandler(faq, pattern='(FAQ_.*|address|price|schedule|contacts)'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
@@ -450,24 +555,24 @@ class Command(BaseCommand):
                     CallbackQueryHandler(order_box, pattern='to_box_order'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'ORDER_BOX':[
+                'ORDER_BOX': [
                     CallbackQueryHandler(order_box, pattern='(Привезу_сам|Заберите_бесплатно|.*weight.*|.*volume.*)'),
                     CallbackQueryHandler(process_personal_data, pattern='personal_data_processing'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'PERSONAL_PROCCESSING':[
+                'PERSONAL_PROCCESSING': [
                     CallbackQueryHandler(process_personal_data, pattern='personal_data_processing'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_name),
                 ],
-                'GET_ADDRESS':[
+                'GET_ADDRESS': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_address),
                 ],
-                'GET_PHONE':[
+                'GET_PHONE': [
                     MessageHandler(Filters.text, get_phone),
                 ],
-                'GET_EMAIL':[
+                'GET_EMAIL': [
                     MessageHandler(Filters.text, get_email),
                 ],
                 'GET_ITEM_LIST': [
@@ -477,7 +582,7 @@ class Command(BaseCommand):
                     MessageHandler(Filters.text, get_order_name),
                 ],
             },
-            fallbacks = [CommandHandler('cancel', cancel)]
+            fallbacks=[CommandHandler('cancel', cancel)]
         )
 
         dispatcher.add_handler(conv_handler)

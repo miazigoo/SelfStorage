@@ -61,7 +61,6 @@ class Order(models.Model):
     size = models.CharField(max_length=50, verbose_name='Размер', null=True, blank=True)
     things = models.TextField(max_length=50, verbose_name='Список вещей', null=True, blank=True)
     title = models.CharField(max_length=200, verbose_name='Название заказа', null=True, blank=True)
-    delivery_type = models.CharField(max_length=25, verbose_name="Тип доставки", null=True, blank=True)
 
     def get_description(self):
         if self.things:
@@ -95,10 +94,8 @@ class DeliveryStatus(models.Model):
         verbose_name_plural = 'Статусы доставки'
 
 
-
 class DeliveryType(models.Model):
     name = models.CharField(max_length=25, verbose_name="Тип доставки")
-
 
 
 class Delivery(models.Model):
@@ -133,5 +130,3 @@ class Advertisement(models.Model):
     class Meta:
         verbose_name = 'Рекламная кампания'
         verbose_name_plural = 'Рекламные кампании'
-
-
