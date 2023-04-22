@@ -1,6 +1,6 @@
 import logging
 import random
-
+from bot.faq_answers import FAQ_ANSWERS
 from django.core.management.base import BaseCommand
 from phonenumbers import is_valid_number, parse
 from SelfStorage import settings
@@ -105,7 +105,8 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         env = environs.Env()
         env.read_env()
-        tg_token = settings.tg_token
+        tg_token = env('TG_TOKEN')
+        #tg_token = settings.tg_token
         updater = Updater(token=tg_token, use_context=True)
         dispatcher = updater.dispatcher
 
@@ -138,69 +139,34 @@ class Command(BaseCommand):
 
             keyboard = [
                 [
-                    InlineKeyboardButton("Можно хранить", callback_data='FAQ_1'),
-                    InlineKeyboardButton("Нельзя хранить", callback_data='FAQ_2'),
-                    InlineKeyboardButton("Как храним", callback_data="FAQ_3"),
+                    InlineKeyboardButton("Что можно хранить", callback_data='FAQ_что_хранить'),
+                    InlineKeyboardButton("Нельзя хранить", callback_data='FAQ_нельзя_хранить'),
+                    InlineKeyboardButton("Как храним", callback_data="FAQ_как_храним"),
                 ],
                 [
-                    InlineKeyboardButton("Адрес", callback_data='address'),
-                    InlineKeyboardButton("Цены", callback_data='price'),
-                    InlineKeyboardButton("Режим Работы", callback_data="schedule"),
+                    InlineKeyboardButton("Адрес", callback_data='FAQ_address'),
+                    InlineKeyboardButton("Цены", callback_data='FAQ_price'),
+                    InlineKeyboardButton("Режим Работы", callback_data="FAQ_schedule"),
                 ],
                 [
-                    InlineKeyboardButton("Как оформить хранение", callback_data='FAQ_4'),
-                    InlineKeyboardButton("Как забрать вещи", callback_data='FAQ_5'),
+                    InlineKeyboardButton("Как оформить хранение", callback_data='FAQ_оформить_хранение'),
+                    InlineKeyboardButton("Как забрать вещи", callback_data='FAQ_забрать_вещи'),
                 ],
                 [
-                    InlineKeyboardButton("Контакты", callback_data='contacts'),
+                    InlineKeyboardButton("Контакты", callback_data='FAQ_contacts'),
                     InlineKeyboardButton("На главный", callback_data="to_start"),
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-
             query.answer()
-
             if query.data == 'to_FAQ':
                 query.edit_message_text(
                     text="Выберете интересующий вопрос", reply_markup=reply_markup
                 )
-
-            if query.data == 'FAQ_1':
+            else:
                 query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'FAQ_2':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'FAQ_3':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'FAQ_4':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'FAQ_5':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'address':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'price':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'schedule':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
-            if query.data == 'contacts':
-                query.edit_message_text(
-                    text=f'Выводим  ответ на  {query.data}', reply_markup=reply_markup
-                )
+                        text=FAQ_ANSWERS[query.data], reply_markup=reply_markup
+                    )
             return 'SHOW_INFO'
 
         def order_box(update, context):
