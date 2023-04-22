@@ -224,13 +224,13 @@ class Command(BaseCommand):
                     text="Выберите вес", reply_markup=reply_markup
                 )
 
-            if query.data == "weight_le_10" or query.data == "weight_10to25" \
-                    or query.data == 'weight_25to50' or query.data == 'weight_50to75' \
-                    or query.data == "weight_ge_70":
+            if re.match(r'^weight_.*', query.data):
                 weight = query.data
                 context.user_data['weight'] = weight
+                print(weight)
 
             if query.data == 'no_weight_info' or 'weight_' in query.data:
+                print(query.data)
                 keyboard = [
                     [
                         InlineKeyboardButton("Укажите объем", callback_data="choose_volume"),
@@ -262,8 +262,7 @@ class Command(BaseCommand):
                     text="Выберите объем", reply_markup=reply_markup
                 )
 
-            if query.data == "volume_le_1" or query.data == "volume_1to3" or query.data == 'volume_3to7' \
-                    or query.data == 'volume_7to10' or query.data == "volume_ge_10":
+            if re.match(r'^volume_.*', query.data):
                 size = query.data
                 context.user_data['size'] = size
 
@@ -515,7 +514,7 @@ class Command(BaseCommand):
                 ],
 
                 'SHOW_INFO': [
-                    CallbackQueryHandler(faq, pattern='(FAQ_.*|address|price|schedule|contacts)'),
+                    CallbackQueryHandler(faq, pattern='(FAQ_.*)'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'SHOW_ORDERS': [
