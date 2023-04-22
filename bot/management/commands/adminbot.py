@@ -2,18 +2,12 @@ import logging
 import datetime
 from pytz import timezone
 from django.core.management.base import BaseCommand
-from django.conf import settings
+from SelfStorage import settings
 import environs
-import re
 from telegram import (
-    InlineQueryResultArticle,
-    InputTextMessageContent,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
-    Update,
     ReplyKeyboardRemove,
-    ReplyKeyboardMarkup,
-    CallbackQuery
 )
 from telegram.ext import (
     Updater,
@@ -30,7 +24,6 @@ from bot.models import (
     Order,
 )
 
-
 # Ведение журнала логов
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -38,24 +31,24 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 def step_count():
     step = 1
     while True:
         yield step
         step = step + 1
 
+
 step_counter = step_count()
+
 
 class Command(BaseCommand):
     help = 'Телеграм-бот'
 
     def handle(self, *args, **kwargs):
-        env = environs.Env()
-        env.read_env()
-        tg_token = env('TG_TOKEN')
-        updater = Updater(token=tg_token, use_context=True)
+        updater = Updater(token=settings.tg_token_admin, use_context=True)
         dispatcher = updater.dispatcher
-        bitly_token = env('BITLY_TOKEN')
+        bitly_token = settings.bitly_token
 
         def start_conversation(update, _):
             query = update.callback_query
@@ -168,10 +161,10 @@ Aдрес: {delivery.order.client.address}
                 campaigns_keyboard.append([InlineKeyboardButton(campaign.name, callback_data=callback_data)])
 
             to_start_keyboard = [
-                 [
+                [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                 ]
-             ]
+                ]
+            ]
             to_stat_keyboard = [
                 [
                     InlineKeyboardButton("Кампании", callback_data="to_stat"),
@@ -228,7 +221,7 @@ Aдрес: {delivery.order.client.address}
                 ]
                 reply_markup = InlineKeyboardMarkup(keyword)
                 context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="Такая ссылка уже есть в списке кампаний", reply_markup=reply_markup)
+                                         text="Такая ссылка уже есть в списке кампаний", reply_markup=reply_markup)
 
                 return 'CHECK_URL'
             else:
@@ -263,7 +256,6 @@ Aдрес: {delivery.order.client.address}
                                      text=text, reply_markup=reply_markup)
             return 'MAIN_MENU'
 
-
         def cancel(update, _):
             user = update.message.from_user
             logger.info("Пользователь %s отменил разговор.", user.first_name)
@@ -272,7 +264,6 @@ Aдрес: {delivery.order.client.address}
                 reply_markup=ReplyKeyboardRemove()
             )
             return ConversationHandler.END
-
 
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('start', start_conversation)],
@@ -293,7 +284,7 @@ Aдрес: {delivery.order.client.address}
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(add_new_campaign, pattern='add_new_campaign'),
                 ],
-                'DELIVERY':[
+                'DELIVERY': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
                 'EXPIRED': [
@@ -303,15 +294,15 @@ Aдрес: {delivery.order.client.address}
                     CallbackQueryHandler(show_stat, pattern='(stat_.*|to_stat)'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
-                'GET_NAME':[
+                'GET_NAME': [
                     MessageHandler(Filters.text, get_name),
                 ],
-                'GET_URL':[
+                'GET_URL': [
                     MessageHandler(Filters.text, get_url),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
             },
-            fallbacks = [CommandHandler('cancel', cancel)]
+            fallbacks=[CommandHandler('cancel', cancel)]
         )
 
         dispatcher.add_handler(conv_handler)

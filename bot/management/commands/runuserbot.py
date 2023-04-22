@@ -344,9 +344,10 @@ class Command(BaseCommand):
             address = update.message.text
             context.user_data['address'] = address
 
-            text = '<b>Введите номер телефона:</b>'
+            text = '✅ <b>Введите номер телефона:</b>'
             context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
+                                     text=text,
+                                     parse_mode=ParseMode.HTML)
             return 'GET_PHONE'
 
         def get_phone(update, context):
@@ -355,7 +356,8 @@ class Command(BaseCommand):
                 context.user_data['phone_number'] = phone_number
                 text = '<b>Введите email</b>'
                 context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text=text)
+                                         text=text,
+                                         parse_mode=ParseMode.HTML)
                 return 'GET_EMAIL'
             else:
                 context.bot.send_message(chat_id=update.effective_chat.id,
