@@ -553,7 +553,6 @@ class Command(BaseCommand):
             return 'SHOW_ORDERS'
 
         def process_delivery(update, context):
-            print(context.user_data)
             query = update.callback_query
             chat_id = update.effective_chat.id
             close_time = datetime.date.today()
@@ -567,7 +566,6 @@ class Command(BaseCommand):
                 context.user_data['self_delivery'] = False
                 if query.data == "to_self_delivery":
                     context.user_data['self_delivery'] = True
-                print(context.user_data)
                 keyboard = [
                     [
                         InlineKeyboardButton("Насовсем", callback_data="Насовсем"),
