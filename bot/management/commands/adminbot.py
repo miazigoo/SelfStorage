@@ -89,6 +89,8 @@ Aдрес: {delivery.order.client.address}
 """
                     client_contacts.append(client_contact)
                 client_contacts = "\n".join(client_contacts)
+                if not client_contacts:
+                    client_contacts = "Сейчас не требуются доставки!"
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
@@ -117,6 +119,8 @@ Aдрес: {delivery.order.client.address}
 """
                 client_contacts.append(client_contact)
             client_contacts = "\n".join(client_contacts)
+            if not client_contacts:
+                client_contacts = "Сейчас нет просроченных заказов!"
             if query.data == 'to_expired':
                 keyboard = [
                     [
