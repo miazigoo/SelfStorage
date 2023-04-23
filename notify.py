@@ -1,9 +1,10 @@
 from SelfStorage.wsgi import *
+
 import datetime
-import time
 
 import environs
-import schedule
+import pytz
+from apscheduler.schedulers.blocking import BlockingScheduler
 from dateutil.relativedelta import relativedelta
 from django.db import models
 from pytz import timezone
@@ -52,10 +53,10 @@ def send_notification_expired():
         send_email(order, get_subject_expired(order), get_message_expired(order))
     print(f'Уведомления о просроченных заказах отправлены {datetime.datetime.now()}')
 
-schedule.every().day.at("00:36", "UTC").do(send_notification_prior)
-schedule.every(30).days.at("00:57", "UTC").do(send_notification_expired)
 
+scheduler = BlockingScheduler(timezone=pytz.utc)
+now=datetime.datetime.now(tz=pytz.utc)
+scheduler.add_job(send_notification_expired, 'cron', day='24', hour=17, minute=10)
+scheduler.add_job(send_notification_prior, 'cron', hour=23, minute=30)
 
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+scheduler.start()
