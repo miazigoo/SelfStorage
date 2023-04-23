@@ -328,29 +328,48 @@ class Command(BaseCommand):
             context.user_data['nickname'] = nickname
             context.user_data['name'] = name
 
-            text = '✅ Ув. {}\n\n<b>Введите ваш адрес</b> '.format(update.message.text)
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
+            keyboard = [
+                [
+                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text(
+                text="✅ Ув. {}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup
+            )
+
             return 'GET_ADDRESS'
 
         def get_address(update, context):
             address = update.message.text
             context.user_data['address'] = address
 
-            text = '✅ <b>Введите номер телефона:</b>'
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text,
-                                     parse_mode=ParseMode.HTML)
+            keyboard = [
+                [
+                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text(
+                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup
+            )
+
             return 'GET_PHONE'
 
         def get_phone(update, context):
             phone_number = update.message.text
             if is_valid_number(parse(phone_number, 'RU')):
                 context.user_data['phone_number'] = phone_number
-                text = '<b>Введите email</b>'
-                context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text=text,
-                                         parse_mode=ParseMode.HTML)
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Назад", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                update.message.reply_text(
+                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup
+                )
+
                 return 'GET_EMAIL'
             else:
                 context.bot.send_message(chat_id=update.effective_chat.id,
@@ -361,9 +380,17 @@ class Command(BaseCommand):
             email = update.message.text
             if re.match(r'\w[\w\.-]*@\w[\w\.-]+\.\w+', email):
                 context.user_data['email'] = email
-                text = update.message.text + '<b> Введите список вещей в одном сообщении</b>'
-                context.bot.send_message(chat_id=update.effective_chat.id,
-                                         text=text)
+
+                keyboard = [
+                    [
+                        InlineKeyboardButton("Назад", callback_data="to_start"),
+                    ]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                update.message.reply_text(
+                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup
+                )
+
                 return 'GET_ITEM_LIST'
             else:
                 context.bot.send_message(chat_id=update.effective_chat.id,
@@ -374,11 +401,17 @@ class Command(BaseCommand):
         def get_item_list(update, context):
             things = update.message.text
             context.user_data['things'] = things
-            text = 'ECHO: ' + update.message.text + ' Назовите заказ \n' \
-                                                    'Например, зимние куртки ' \
-                                                    'или Спорт инвентарь'
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
+
+            keyboard = [
+                [
+                    InlineKeyboardButton("Назад", callback_data="to_start"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            update.message.reply_text(
+                text='✅ Назовите заказ. апример, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
+            )
+
             return 'GET_ORDER_NAME'
 
         def get_order_name(update, context):
@@ -647,15 +680,19 @@ class Command(BaseCommand):
                     MessageHandler(Filters.text, get_address),
                 ],
                 'GET_PHONE': [
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_phone),
                 ],
                 'GET_EMAIL': [
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_email),
                 ],
                 'GET_ITEM_LIST': [
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_item_list),
                 ],
                 'GET_ORDER_NAME': [
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_order_name),
                 ],
             },
