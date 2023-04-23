@@ -44,7 +44,6 @@ def send_qr(update, updater):
     remove(img_name)
 
 
-
 with open('bot/hello.txt', encoding="utf-8", mode='r') as file:
     start_text = file.read()
 
@@ -389,7 +388,8 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup
+                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
                 )
 
                 return 'GET_ITEM_LIST'
@@ -397,7 +397,6 @@ class Command(BaseCommand):
                 context.bot.send_message(chat_id=update.effective_chat.id,
                                          text='Введите корректный email')
                 return 'GET_EMAIL'
-
 
         def get_item_list(update, context):
             things = update.message.text
@@ -425,7 +424,6 @@ class Command(BaseCommand):
                 bool_measurement = False
             else:
                 bool_measurement = True
-            print(bool_measurement)
 
             type_delivery = context.user_data.get('type_delivery')
             nickname = context.user_data.get('nickname')
@@ -448,7 +446,6 @@ class Command(BaseCommand):
                     'personal_data_consent': True
                 })
             delivery_status = DeliveryStatus.objects.get(pk=1)
-            print(delivery_status)
 
             order = Order.objects.create(
                 client=profile,
