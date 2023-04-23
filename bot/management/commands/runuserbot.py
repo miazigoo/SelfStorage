@@ -44,6 +44,7 @@ def send_qr(update, updater):
     remove(img_name)
 
 
+
 with open('bot/hello.txt', encoding="utf-8", mode='r') as file:
     start_text = file.read()
 
@@ -334,7 +335,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text="✅ Ув. {}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup,
+                text=f"✅ Ув. {name}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup,
                 parse_mode=ParseMode.HTML
             )
 
@@ -351,8 +352,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML
+                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
             )
 
             return 'GET_PHONE'
@@ -368,8 +368,7 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML
+                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
                 )
 
                 return 'GET_EMAIL'
@@ -390,8 +389,7 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b> Введите список вещей в одном сообщении</b>',
-                    reply_markup=reply_markup, parse_mode=ParseMode.HTML
+                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup
                 )
 
                 return 'GET_ITEM_LIST'
@@ -399,6 +397,7 @@ class Command(BaseCommand):
                 context.bot.send_message(chat_id=update.effective_chat.id,
                                          text='Введите корректный email')
                 return 'GET_EMAIL'
+
 
         def get_item_list(update, context):
             things = update.message.text
@@ -411,7 +410,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ Назовите заказ. Пример: "Зимние куртки" или "Спорт инвентарь"', reply_markup=reply_markup
+                text='✅ Назовите заказ. Например, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
             )
 
             return 'GET_ORDER_NAME'
@@ -475,7 +474,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text="✅ Ваш заказ успешно создан", reply_markup=reply_markup
+                text="Ваш заказ успешно создан", reply_markup=reply_markup
             )
             return 'GREETINGS'
 
@@ -610,7 +609,7 @@ class Command(BaseCommand):
                 context.bot.send_message(
                     text=f'Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. ' \
                          'Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса. ' \
-                         'Если хотел вернуть обратно: Вы можете в любой момент вернуть вещи обратно на хранение. ' \
+                         'Вы можете в любой момент вернуть вещи обратно на хранение. ' \
                          'Для этого Вы можете либо самостоятельно привезти их нам, либо заказать доставку.',
                     chat_id=update.effective_chat.id,
                     reply_markup=reply_markup
