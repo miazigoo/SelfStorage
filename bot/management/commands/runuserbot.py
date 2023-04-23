@@ -334,7 +334,8 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text="✅ Ув. {}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup
+                text=f"✅ Ув. {name}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML
             )
 
             return 'GET_ADDRESS'
@@ -350,7 +351,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup
+                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
             )
 
             return 'GET_PHONE'
@@ -366,7 +367,7 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup
+                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
                 )
 
                 return 'GET_EMAIL'
@@ -387,7 +388,8 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup
+                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
                 )
 
                 return 'GET_ITEM_LIST'
@@ -407,7 +409,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ Назовите заказ. апример, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
+                text='✅ Назовите заказ. Например, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
             )
 
             return 'GET_ORDER_NAME'
@@ -418,6 +420,10 @@ class Command(BaseCommand):
             size = context.user_data.get('size')
             weight = context.user_data.get('weight')
             weight_value, size_value = value_from_data(weight, size)
+            if weight and size:
+                bool_measurement = False
+            else:
+                bool_measurement = True
 
             type_delivery = context.user_data.get('type_delivery')
             nickname = context.user_data.get('nickname')
@@ -429,15 +435,18 @@ class Command(BaseCommand):
 
             all_box = Box.objects.all()
             random_box = random.choice(all_box)
-            profile, _ = Client.objects.get_or_create(chat_id=chat_id,
-                                                      defaults={
-                                                          'nickname': nickname,
-                                                          'name': name,
-                                                          'address': address,
-                                                          'email': email,
-                                                          'tel_number': phone_number,
-                                                          'personal_data_consent': True
-                                                      })
+            profile, _ = Client.objects.get_or_create(
+                chat_id=chat_id,
+                defaults={
+                    'nickname': nickname,
+                    'name': name,
+                    'address': address,
+                    'email': email,
+                    'tel_number': phone_number,
+                    'personal_data_consent': True
+                })
+            delivery_status = DeliveryStatus.objects.get(pk=1)
+
             order = Order.objects.create(
                 client=profile,
                 weight=weight_value,
@@ -447,6 +456,13 @@ class Command(BaseCommand):
                 box=random_box,
             )
             delivery_type = DeliveryType.objects.get_or_create(name=type_delivery)
+            if type_delivery == 'Заберите_бесплатно':
+                delivery = Delivery.objects.create(
+                    type=delivery_type[0],
+                    order=order,
+                    status=delivery_status,
+                    need_measurement=bool_measurement
+                )
 
             keyboard = [
                 [
@@ -590,7 +606,7 @@ class Command(BaseCommand):
                 context.bot.send_message(
                     text=f'Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. ' \
                          'Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса. ' \
-                         'Если хотел вернуть обратно: Вы можете в любой момент вернуть вещи обратно на хранение. ' \
+                         'Вы можете в любой момент вернуть вещи обратно на хранение. ' \
                          'Для этого Вы можете либо самостоятельно привезти их нам, либо заказать доставку.',
                     chat_id=update.effective_chat.id,
                     reply_markup=reply_markup
