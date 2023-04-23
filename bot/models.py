@@ -83,17 +83,6 @@ class Order(models.Model):
         verbose_name_plural = 'Заказы'
 
 
-class DeliveryStatus(models.Model):
-    name = models.CharField(max_length=10, verbose_name="Название статуса доставки")
-
-    def __str__(self):
-        return f'{self.name}'
-
-    class Meta:
-        verbose_name = 'Статус доставки'
-        verbose_name_plural = 'Статусы доставки'
-
-
 class DeliveryType(models.Model):
     name = models.CharField(max_length=25, verbose_name="Тип доставки")
 
@@ -105,8 +94,6 @@ class Delivery(models.Model):
     type = models.ForeignKey(DeliveryType, on_delete=models.CASCADE, verbose_name='Тип доставки')
     order = models.ForeignKey(Order, on_delete=models.CASCADE,
                               related_name='deliveries', verbose_name='Заказ')
-    status = models.ForeignKey(DeliveryStatus, on_delete=models.CASCADE,
-                               related_name='deliveries', verbose_name='Статус')
     take_at = models.DateTimeField(verbose_name='Забрать в', null=True, blank=True)
     took_at = models.DateTimeField(verbose_name='Забрали в', null=True, blank=True)
     deliver_at = models.DateTimeField(verbose_name='Доставить в', null=True, blank=True)

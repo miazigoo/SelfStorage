@@ -11,7 +11,7 @@ from phonenumbers import is_valid_number, parse
 from SelfStorage import settings
 import re
 from bot.models import (Client, Order, Storage, DeliveryType,
-                        DeliveryStatus, Delivery, Box)
+                        Delivery, Box)
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -445,7 +445,6 @@ class Command(BaseCommand):
                     'tel_number': phone_number,
                     'personal_data_consent': True
                 })
-            delivery_status = DeliveryStatus.objects.get(pk=1)
 
             order = Order.objects.create(
                 client=profile,
@@ -460,7 +459,6 @@ class Command(BaseCommand):
                 delivery = Delivery.objects.create(
                     type=delivery_type[0],
                     order=order,
-                    status=delivery_status,
                     need_measurement=bool_measurement
                 )
 
