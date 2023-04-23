@@ -3,7 +3,6 @@ import datetime
 from pytz import timezone
 from django.core.management.base import BaseCommand
 from SelfStorage import settings
-import environs
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -78,7 +77,7 @@ class Command(BaseCommand):
             query = update.callback_query
             deliveries = Delivery.objects.filter(status__id=1)
             client_contacts = []
-            if query.data == 'to_delivery' and deliveries:
+            if query.data == 'to_delivery':
                 for delivery in deliveries:
                     client_contact = f"""
 Заказ:{delivery.order.pk} - {delivery.type.name}
