@@ -23,11 +23,6 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ['client']
 
 
-@admin.register(DeliveryStatus)
-class DeliveryStatusAdmin(admin.ModelAdmin):
-    list_display = ['name']
-
-
 @admin.register(Delivery)
 class DeliveryAdmin(admin.ModelAdmin):
     list_display = ['type', 'order']
