@@ -22,6 +22,8 @@ python3 manage.py migrate
 Перед установкой создайте файл **.env** вида:
 ```properties
 TG_TOKEN=YOUR_TG_TOKEN
+TG_TOKEN_ADMIN=YOUR_NEXT_TG_TOKEN
+BITLY_TOKEN=YOUR_BITLY_TOKEN
 ```
 
 - Токен для Телеграм бота вы можете получить https://telegram.me/BotFather Чат ID можно узнать в свойствах канала
