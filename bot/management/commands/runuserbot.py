@@ -421,6 +421,11 @@ class Command(BaseCommand):
             size = context.user_data.get('size')
             weight = context.user_data.get('weight')
             weight_value, size_value = value_from_data(weight, size)
+            if weight and size:
+                bool_measurement = False
+            else:
+                bool_measurement = True
+            print(bool_measurement)
 
             type_delivery = context.user_data.get('type_delivery')
             nickname = context.user_data.get('nickname')
@@ -432,15 +437,19 @@ class Command(BaseCommand):
 
             all_box = Box.objects.all()
             random_box = random.choice(all_box)
-            profile, _ = Client.objects.get_or_create(chat_id=chat_id,
-                                                      defaults={
-                                                          'nickname': nickname,
-                                                          'name': name,
-                                                          'address': address,
-                                                          'email': email,
-                                                          'tel_number': phone_number,
-                                                          'personal_data_consent': True
-                                                      })
+            profile, _ = Client.objects.get_or_create(
+                chat_id=chat_id,
+                defaults={
+                    'nickname': nickname,
+                    'name': name,
+                    'address': address,
+                    'email': email,
+                    'tel_number': phone_number,
+                    'personal_data_consent': True
+                })
+            delivery_status = DeliveryStatus.objects.get(pk=1)
+            print(delivery_status)
+
             order = Order.objects.create(
                 client=profile,
                 weight=weight_value,
@@ -450,6 +459,13 @@ class Command(BaseCommand):
                 box=random_box,
             )
             delivery_type = DeliveryType.objects.get_or_create(name=type_delivery)
+            if type_delivery == 'Заберите_бесплатно':
+                delivery = Delivery.objects.create(
+                    type=delivery_type[0],
+                    order=order,
+                    status=delivery_status,
+                    need_measurement=bool_measurement
+                )
 
             keyboard = [
                 [

@@ -97,6 +97,9 @@ class DeliveryStatus(models.Model):
 class DeliveryType(models.Model):
     name = models.CharField(max_length=25, verbose_name="Тип доставки")
 
+    def __str__(self):
+        return {self.name}
+
 
 class Delivery(models.Model):
     type = models.ForeignKey(DeliveryType, on_delete=models.CASCADE, verbose_name='Тип доставки')
