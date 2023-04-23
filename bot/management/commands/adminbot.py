@@ -306,6 +306,8 @@ Aдрес: {delivery.order.client.address}
         )
 
         dispatcher.add_handler(conv_handler)
+        start_handler = CommandHandler('start', start_conversation)
+        dispatcher.add_handler(start_handler)
 
         updater.start_polling()
         updater.idle()
