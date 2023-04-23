@@ -7,3 +7,4 @@ celery==5.2.7
 phonenumbers==8.13.10
 python-dateutil==2.8.2
 schedule=1.2.0
+qrcode==7.4.2
