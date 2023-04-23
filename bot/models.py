@@ -120,3 +120,4 @@ class Advertisement(models.Model):
     class Meta:
         verbose_name = 'Рекламная кампания'
         verbose_name_plural = 'Рекламные кампании'
+

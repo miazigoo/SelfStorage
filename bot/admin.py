@@ -22,6 +22,7 @@ class OrderAdmin(admin.ModelAdmin):
     raw_id_fields = ('box',)
     list_display = ['client']
 
+
 @admin.register(Delivery)
 class DeliveryAdmin(admin.ModelAdmin):
     list_display = ['type', 'order']
