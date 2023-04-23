@@ -14,6 +14,7 @@ pip install -r requirements.txt
 Создайте базу данных SQLite
 
 ```sh
+python3 manage.py makemigrations
 python3 manage.py migrate
 ```
 Для корректной работы в БД должен существовать склад и хотя бы 1 бокс
