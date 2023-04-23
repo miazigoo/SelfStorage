@@ -44,7 +44,6 @@ def send_qr(update, updater):
     remove(img_name)
 
 
-
 with open('bot/hello.txt', encoding="utf-8", mode='r') as file:
     start_text = file.read()
 
@@ -370,7 +369,6 @@ class Command(BaseCommand):
                                          text='Введите корректный email')
                 return 'GET_EMAIL'
 
-
         def get_item_list(update, context):
             things = update.message.text
             context.user_data['things'] = things
@@ -519,7 +517,6 @@ class Command(BaseCommand):
             return 'SHOW_ORDERS'
 
         def process_delivery(update, context):
-            print(context.user_data)
             query = update.callback_query
             chat_id = update.effective_chat.id
             close_time = datetime.date.today()
@@ -533,7 +530,6 @@ class Command(BaseCommand):
                 context.user_data['self_delivery'] = False
                 if query.data == "to_self_delivery":
                     context.user_data['self_delivery'] = True
-                print(context.user_data)
                 keyboard = [
                     [
                         InlineKeyboardButton("Насовсем", callback_data="Насовсем"),
