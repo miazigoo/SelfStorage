@@ -334,7 +334,8 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text="✅ Ув. {}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup
+                text="✅ Ув. {}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML
             )
 
             return 'GET_ADDRESS'
@@ -350,7 +351,8 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup
+                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML
             )
 
             return 'GET_PHONE'
@@ -366,7 +368,8 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup
+                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML
                 )
 
                 return 'GET_EMAIL'
@@ -387,7 +390,8 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup
+                    text='✅ <b> Введите список вещей в одном сообщении</b>',
+                    reply_markup=reply_markup, parse_mode=ParseMode.HTML
                 )
 
                 return 'GET_ITEM_LIST'
@@ -407,7 +411,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ Назовите заказ. апример, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
+                text='✅ Назовите заказ. Пример: "Зимние куртки" или "Спорт инвентарь"', reply_markup=reply_markup
             )
 
             return 'GET_ORDER_NAME'
@@ -455,7 +459,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text="Ваш заказ успешно создан", reply_markup=reply_markup
+                text="✅ Ваш заказ успешно создан", reply_markup=reply_markup
             )
             return 'GREETINGS'
 
