@@ -97,9 +97,6 @@ class DeliveryStatus(models.Model):
 class DeliveryType(models.Model):
     name = models.CharField(max_length=25, verbose_name="Тип доставки")
 
-    def __str__(self):
-        return {self.name}
-
 
 class Delivery(models.Model):
     type = models.ForeignKey(DeliveryType, on_delete=models.CASCADE, verbose_name='Тип доставки')
@@ -123,9 +120,9 @@ class Delivery(models.Model):
 
 
 class Advertisement(models.Model):
-    name = models.CharField(max_length=100, verbose_name='Рекламные кампании')
-    url = models.CharField(max_length=100, verbose_name='Короткая ссылка')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата добавления')
+    name = models.CharField(max_length=100, verbose_name='Рекламные кампании', null=True, blank=True)
+    url = models.CharField(max_length=100, verbose_name='Короткая ссылка', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата добавления', null=True, blank=True)
 
     def __str__(self):
         return f'{self.name}'
