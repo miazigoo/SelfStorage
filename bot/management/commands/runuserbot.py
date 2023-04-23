@@ -410,7 +410,7 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ Назовите заказ. апример, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
+                text='✅ Назовите заказ. Например, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
             )
 
             return 'GET_ORDER_NAME'
@@ -609,7 +609,7 @@ class Command(BaseCommand):
                 context.bot.send_message(
                     text=f'Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. ' \
                          'Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса. ' \
-                         'Если хотел вернуть обратно: Вы можете в любой момент вернуть вещи обратно на хранение. ' \
+                         'Вы можете в любой момент вернуть вещи обратно на хранение. ' \
                          'Для этого Вы можете либо самостоятельно привезти их нам, либо заказать доставку.',
                     chat_id=update.effective_chat.id,
                     reply_markup=reply_markup
