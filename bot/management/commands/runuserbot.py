@@ -6,6 +6,7 @@ import qrcode
 from os import remove
 from bot.faq_answers import FAQ_ANSWERS
 from django.core.management.base import BaseCommand
+from django.core.validators import validate_email
 from phonenumbers import is_valid_number, parse
 from SelfStorage import settings
 import re
@@ -43,14 +44,6 @@ def send_qr(update, updater):
     remove(img_name)
 
 
-def step_count():
-    step = 1
-    while True:
-        yield step
-        step = step + 1
-
-
-step_counter = step_count()
 
 with open('bot/hello.txt', encoding="utf-8", mode='r') as file:
     start_text = file.read()
@@ -366,11 +359,17 @@ class Command(BaseCommand):
 
         def get_email(update, context):
             email = update.message.text
-            context.user_data['email'] = email
-            text = 'ECHO: ' + update.message.text + '<b> Введите список вещей в одном сообщении</b>'
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=text)
-            return 'GET_ITEM_LIST'
+            if re.match(r'\w[\w\.-]*@\w[\w\.-]+\.\w+', email):
+                context.user_data['email'] = email
+                text = update.message.text + '<b> Введите список вещей в одном сообщении</b>'
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text=text)
+                return 'GET_ITEM_LIST'
+            else:
+                context.bot.send_message(chat_id=update.effective_chat.id,
+                                         text='Введите корректный email')
+                return 'GET_EMAIL'
+
 
         def get_item_list(update, context):
             things = update.message.text
@@ -599,21 +598,6 @@ class Command(BaseCommand):
 
             return 'DELIVERY'
 
-        def update_form(update, _):
-            query = update.callback_query
-            query.answer()
-            keyboard = [
-                [
-                    InlineKeyboardButton("Изменить", callback_data="update_field"),
-                    InlineKeyboardButton("Назад", callback_data="to_start"),
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            query.edit_message_text(
-                text=f"Обновить {query.data}", reply_markup=reply_markup
-            )
-            return 'ORDER_BOX'
-
         def cancel(update, _):
             user = update.message.from_user
             logger.info("Пользователь %s отменил разговор.", user.first_name)
@@ -631,7 +615,6 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     CallbackQueryHandler(order_box, pattern='to_box_order'),
                     CallbackQueryHandler(show_my_orders, pattern='to_my_orders'),
-                    CallbackQueryHandler(update_form, pattern='(update_.*)'),
                 ],
 
                 'SHOW_INFO': [
