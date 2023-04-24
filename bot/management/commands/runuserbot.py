@@ -1,17 +1,12 @@
 import datetime
 import logging
 import random
+import re
+from os import remove
 
 import qrcode
-from os import remove
-from bot.faq_answers import FAQ_ANSWERS
 from django.core.management.base import BaseCommand
-from django.core.validators import validate_email
 from phonenumbers import is_valid_number, parse
-from SelfStorage import settings
-import re
-from bot.models import (Client, Order, Storage, DeliveryType,
-                        Delivery, Box)
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -25,6 +20,11 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
+
+from SelfStorage import settings
+from bot.faq_answers import FAQ_ANSWERS
+from bot.models import (Client, Order, Storage, DeliveryType,
+                        Delivery, Box)
 
 # Ведение журнала логов
 logging.basicConfig(

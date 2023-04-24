@@ -1,9 +1,9 @@
-import logging
 import datetime
-from pytz import timezone
+import logging
+
 from django.core.management.base import BaseCommand
-from SelfStorage import settings
 from django.db.models import Q
+from pytz import timezone
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -17,11 +17,17 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
+
+from SelfStorage import settings
 from bot.bitly import get_clicks
 from bot.models import (
     Advertisement,
     Delivery,
     Order,
+)
+from bot.text_templates import (
+    get_client_contact_for_delivery,
+    get_client_contact_for_expired,
 )
 
 # Ведение журнала логов
@@ -30,16 +36,6 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
-
-
-def step_count():
-    step = 1
-    while True:
-        yield step
-        step = step + 1
-
-
-step_counter = step_count()
 
 
 class Command(BaseCommand):
@@ -83,13 +79,7 @@ class Command(BaseCommand):
             client_contacts = []
             if query.data == 'to_delivery':
                 for delivery in deliveries:
-                    client_contact = f"""
-Заказ:{delivery.order.pk} - {delivery.type.name}
----------------------------------------    
-Имя клиента: {delivery.order.client.name}
-Aдрес: {delivery.order.client.address}
-Номер телефона клиента: {delivery.order.client.tel_number}
-"""
+                    client_contact = get_client_contact_for_delivery(delivery)
                     client_contacts.append(client_contact)
                 client_contacts = "\n".join(client_contacts)
                 if not client_contacts:
@@ -114,12 +104,7 @@ Aдрес: {delivery.order.client.address}
             orders = Order.objects.filter(end_storage_date__isnull=True, paid_up_to__lt=today)
             client_contacts = []
             for order in orders:
-                client_contact = f"""
-Заказ:{order.pk} - {(today - order.paid_up_to).days} дней просрочки
----------------------------------------    
-Имя клиента: {order.client.name}
-Номер телефона клиента: {order.client.tel_number}
-"""
+                client_contact = get_client_contact_for_expired(today, order)
                 client_contacts.append(client_contact)
             client_contacts = "\n".join(client_contacts)
             if not client_contacts:
