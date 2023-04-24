@@ -56,7 +56,7 @@ def send_notification_expired():
 
 scheduler = BlockingScheduler(timezone=pytz.utc)
 now=datetime.datetime.now(tz=pytz.utc)
-scheduler.add_job(send_notification_expired, 'cron', day='24', hour=17, minute=10)
-scheduler.add_job(send_notification_prior, 'cron', hour=23, minute=30)
+scheduler.add_job(send_notification_expired, 'cron', day='24', hour=9, minute=15)
+scheduler.add_job(send_notification_prior, 'cron', hour=9, minute=15)
 
 scheduler.start()
