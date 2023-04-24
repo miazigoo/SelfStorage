@@ -31,3 +31,7 @@ class DeliveryAdmin(admin.ModelAdmin):
 @admin.register(DeliveryType)
 class DeliveryTypeAdmin(admin.ModelAdmin):
     list_display = ['name']
+
+@admin.register(Advertisement)
+class AdvertisementAdmin(admin.ModelAdmin):
+    list_display = ['name', 'url', 'created_at']
