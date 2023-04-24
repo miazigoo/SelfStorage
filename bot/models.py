@@ -1,6 +1,15 @@
 from django.db import models
 
 
+class ClientQuerySet(models.QuerySet):
+
+    def get_or_none(self, *args, **kwargs):
+        try:
+            return self.get(*args, **kwargs)
+        except Client.DoesNotExist:
+            return None
+
+
 class Client(models.Model):
     chat_id = models.CharField(max_length=100, verbose_name='ID чата клиента')
     nickname = models.CharField(max_length=500, verbose_name='Никнейм клиента')
@@ -13,6 +22,8 @@ class Client(models.Model):
     personal_data_consent = models.BooleanField(verbose_name='Согласие на ОПД', default=False)
     personal_data_consent_date = models.DateTimeField(auto_now_add=True,
                                                       verbose_name='Дата согласия на ОПД', blank=True, null=True)
+
+    objects = ClientQuerySet.as_manager()
 
     def __str__(self):
         return f'#{self.pk} {self.name} {self.nickname}'

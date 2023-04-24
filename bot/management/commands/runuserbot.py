@@ -307,7 +307,7 @@ class Command(BaseCommand):
 
         def process_personal_data(update, context):
             chat_id = update.effective_chat.id
-            client = Client.objects.get(chat_id=chat_id)
+            client = Client.objects.get_or_none(chat_id=chat_id)
             print(client)
             query = update.callback_query
             query.answer()
