@@ -306,6 +306,9 @@ class Command(BaseCommand):
             return 'ORDER_BOX'
 
         def process_personal_data(update, context):
+            chat_id = update.effective_chat.id
+            client = Client.objects.get(chat_id=chat_id)
+            print(client)
             query = update.callback_query
             query.answer()
             keyboard = [
@@ -314,10 +317,25 @@ class Command(BaseCommand):
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            query.edit_message_text(
-                text="В ответном сообщении укажите Ваш имя.", reply_markup=reply_markup
-            )
-            return 'PERSONAL_PROCCESSING'
+
+            if client:
+                query.edit_message_text(
+                    text="✅ <b> Введите адрес доставки</b>",
+                    reply_markup=reply_markup
+                )
+                context.user_data['chat_id'] = chat_id
+                context.user_data['nickname'] = client.nickname
+                context.user_data['name'] = client.name
+                context.user_data['phone_number'] = client.tel_number
+                context.user_data['email'] = client.email
+
+                return 'GET_ADDRESS'
+            else:
+                query.edit_message_text(
+                    text="В ответном сообщении укажите Ваш имя.",
+                    reply_markup=reply_markup
+                )
+                return 'GET_NAME'
 
         def get_name(update, context):
             chat_id = update.message.chat_id
@@ -334,11 +352,11 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text=f"✅ Ув. {name}\n\n<b>Введите ваш адрес</b> ", reply_markup=reply_markup,
+                text=f"✅ Ув. {name}\n\n<b>Введите ваш номер телефона</b> ", reply_markup=reply_markup,
                 parse_mode=ParseMode.HTML
             )
 
-            return 'GET_ADDRESS'
+            return 'GET_PHONE'
 
         def get_address(update, context):
             address = update.message.text
@@ -351,10 +369,10 @@ class Command(BaseCommand):
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ <b>Введите номер телефона:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
+                text='✅ <b>Введите список вещей в одном сообщении:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
             )
 
-            return 'GET_PHONE'
+            return 'GET_ITEM_LIST'
 
         def get_phone(update, context):
             phone_number = update.message.text
@@ -388,11 +406,11 @@ class Command(BaseCommand):
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b> Введите список вещей в одном сообщении</b>', reply_markup=reply_markup,
+                    text='✅ <b> Введите адрес доставки</b>', reply_markup=reply_markup,
                     parse_mode=ParseMode.HTML
                 )
 
-                return 'GET_ITEM_LIST'
+                return 'GET_ADDRESS'
             else:
                 context.bot.send_message(chat_id=update.effective_chat.id,
                                          text='Введите корректный email')
@@ -682,6 +700,10 @@ class Command(BaseCommand):
                 ],
                 'PERSONAL_PROCCESSING': [
                     CallbackQueryHandler(process_personal_data, pattern='personal_data_processing'),
+                    CallbackQueryHandler(start_conversation, pattern='to_start'),
+
+                ],
+                'GET_NAME':[
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_name),
                 ],
