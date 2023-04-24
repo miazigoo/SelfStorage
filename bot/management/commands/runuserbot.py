@@ -454,7 +454,7 @@ class Command(BaseCommand):
                 title=title,
                 box=random_box,
             )
-            delivery_type = DeliveryType.objects.get_or_create(name=type_delivery)
+            delivery_type = DeliveryType.objects.get_or_create(name="забрать вещи у клиента")
             if type_delivery == 'Заберите_бесплатно':
                 delivery = Delivery.objects.create(
                     type=delivery_type[0],
