@@ -453,7 +453,7 @@ class Command(BaseCommand):
 
             all_box = Box.objects.all()
             random_box = random.choice(all_box)
-            profile, _ = Client.objects.get_or_create(
+            profile, _ = Client.objects.update_or_create(
                 chat_id=chat_id,
                 defaults={
                     'nickname': nickname,
