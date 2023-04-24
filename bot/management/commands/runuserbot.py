@@ -472,7 +472,7 @@ class Command(BaseCommand):
                 title=title,
                 box=random_box,
             )
-            delivery_type = DeliveryType.objects.get_or_create(name=type_delivery)
+            delivery_type = DeliveryType.objects.get_or_create(name="забрать вещи у клиента")
             if type_delivery == 'Заберите_бесплатно':
                 delivery = Delivery.objects.create(
                     type=delivery_type[0],
@@ -645,17 +645,35 @@ class Command(BaseCommand):
                 order.end_storage_date = close_time
                 order.save()
             if query.data == "accept":
+                order = Order.objects.get(pk=order_pk)
+                type = DeliveryType.objects.get(pk=2)
+                delivery, created = Delivery.objects.get_or_create(
+                    order=order,
+                    type=type,
+                    delivered_at=None,
+                    defaults={
+                        'need_measurement': False,
+                    }
+                )
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
                     ]
                 ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                query.edit_message_text(
-                    text=f'Ваш заказ №{order_pk} на доставку успешно сформирован! ' \
-                         'В ближайшее время с Вами свяжется наш специалист для уточнения времени доставки.',
-                    reply_markup=reply_markup
-                )
+                if created:
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    query.edit_message_text(
+                        text=f'Ваш заказ на доставку №{delivery.pk} по заказу №{order_pk} успешно сформирован! ' \
+                             'В ближайшее время с Вами свяжется наш специалист для уточнения времени доставки.',
+                        reply_markup=reply_markup
+                    )
+                else:
+                    reply_markup = InlineKeyboardMarkup(keyboard)
+                    query.edit_message_text(
+                        text=f'У Вас уже есть заказ на доставку №{delivery.pk} по заказу №{order_pk}! ' \
+                             'В ближайшее время с Вами свяжется наш специалист для уточнения времени доставки.',
+                        reply_markup=reply_markup
+                    )
 
             return 'DELIVERY'
 
