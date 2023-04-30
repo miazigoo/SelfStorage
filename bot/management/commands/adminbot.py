@@ -32,14 +32,16 @@ from bot.text_templates import (
 
 # Ведение журнала логов
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Телеграм-бот'
+    """
+    Команда для запуска телеграм-бота
+    """
 
     def handle(self, *args, **kwargs):
         updater = Updater(token=settings.tg_token_admin, use_context=True)
@@ -55,17 +57,19 @@ class Command(BaseCommand):
                     InlineKeyboardButton("Реклама", callback_data='to_ad'),
                     InlineKeyboardButton("Доставки", callback_data="to_delivery"),
                     InlineKeyboardButton("Просрочки", callback_data="to_expired"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             if query:
                 query.edit_message_text(
-                    text="Выберете интересующий вопрос", reply_markup=reply_markup
+                    text="Выберете интересующий вопрос",
+                    reply_markup=reply_markup,
                 )
             else:
                 update.message.reply_text(
-                    text="Выберете интресующий вас вопрос", reply_markup=reply_markup
+                    text="Выберете интресующий вас вопрос",
+                    reply_markup=reply_markup,
                 )
 
             return 'MAIN_MENU'
@@ -74,7 +78,7 @@ class Command(BaseCommand):
             query = update.callback_query
             deliveries = Delivery.objects.filter(
                 Q(type__pk=1, took_at__isnull=True) |
-                Q(type__pk=2, delivered_at__isnull=True)
+                Q(type__pk=2, delivered_at__isnull=True),
             )
             client_contacts = []
             if query.data == 'to_delivery':
@@ -87,7 +91,7 @@ class Command(BaseCommand):
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
@@ -113,7 +117,7 @@ class Command(BaseCommand):
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
@@ -134,11 +138,12 @@ class Command(BaseCommand):
                 ],
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(
-                text="Выберите, что Вы хотите сделать", reply_markup=reply_markup
+                text="Выберите, что Вы хотите сделать",
+                reply_markup=reply_markup,
             )
             query.answer()
             return 'SHOW_AD'
@@ -155,13 +160,13 @@ class Command(BaseCommand):
             to_start_keyboard = [
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             to_stat_keyboard = [
                 [
                     InlineKeyboardButton("Кампании", callback_data="to_stat"),
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             campaigns_markup = InlineKeyboardMarkup(campaigns_keyboard + to_start_keyboard)
             stat_markup = InlineKeyboardMarkup(to_stat_keyboard)
@@ -169,7 +174,8 @@ class Command(BaseCommand):
 
             if query.data == 'to_stat':
                 query.edit_message_text(
-                    text="Выберите компанию, по которой хотите узнать статистику:", reply_markup=campaigns_markup
+                    text="Выберите компанию, по которой хотите узнать статистику:",
+                    reply_markup=campaigns_markup,
                 )
 
             if query.data.startswith('stat_'):
@@ -177,7 +183,8 @@ class Command(BaseCommand):
                 url = Advertisement.objects.get(pk=ad_pk).url
                 text = get_clicks(url, bitly_token)
                 query.edit_message_text(
-                    text=text, reply_markup=stat_markup
+                    text=text,
+                    reply_markup=stat_markup,
                 )
 
             return 'SHOW_STAT'
@@ -188,7 +195,7 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(
@@ -209,7 +216,7 @@ class Command(BaseCommand):
                         InlineKeyboardButton("Посмотреть", callback_data=callback_data),
                         InlineKeyboardButton("Изменить ссылку", callback_data="add_new_campaign"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyword)
                 context.bot.send_message(chat_id=update.effective_chat.id,
@@ -221,7 +228,7 @@ class Command(BaseCommand):
                 keyboard = [
                     [
                         InlineKeyboardButton("Назад", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 text = 'Вы ввели ссылку: ' + update.message.text + '\nВведите название кампании:'
@@ -240,7 +247,7 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             text = 'Вы ввели: ' + update.message.text + '\nНовая кампания успешно добавлена в базу данных'
@@ -253,7 +260,7 @@ class Command(BaseCommand):
             logger.info("Пользователь %s отменил разговор.", user.first_name)
             update.message.reply_text(
                 'До новых встреч',
-                reply_markup=ReplyKeyboardRemove()
+                reply_markup=ReplyKeyboardRemove(),
             )
             return ConversationHandler.END
 
@@ -294,7 +301,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
             },
-            fallbacks=[CommandHandler('cancel', cancel)]
+            fallbacks=[CommandHandler('cancel', cancel)],
         )
 
         dispatcher.add_handler(conv_handler)

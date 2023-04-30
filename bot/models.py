@@ -80,9 +80,9 @@ class Order(models.Model):
             things = "Список вещей не был указан"
         return f"""
         {things}
-        
+
         общий вес: {self.weight}
-        
+
         общий размер: {self.size}
         """
 
@@ -128,4 +128,3 @@ class Advertisement(models.Model):
     class Meta:
         verbose_name = 'Рекламная кампания'
         verbose_name_plural = 'Рекламные кампании'
-

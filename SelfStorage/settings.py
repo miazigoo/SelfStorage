@@ -1,7 +1,5 @@
-import os
-
-import dj_database_url
 from pathlib import Path
+
 from environs import Env
 
 env = Env()
@@ -30,7 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bot'
+    'bot',
 ]
 
 MIDDLEWARE = [
@@ -67,16 +65,11 @@ WSGI_APPLICATION = 'SelfStorage.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# DATABASES = {
-#     'default': dj_database_url.parse(
-#         os.getenv('DATABASE', 'sqlite:///db.sqlite3')
-#     ),
-# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    },
 }
 
 

@@ -32,7 +32,7 @@ def send_notification_prior():
     ).filter(
         models.Q(paid_up_to=three_days_before) |
         models.Q(paid_up_to=two_weeks_before) |
-        models.Q(paid_up_to=one_month_before)
+        models.Q(paid_up_to=one_month_before),
     )
     for order in orders:
         send_email(order, get_subject_prior(order), get_message_prior(order))
@@ -47,7 +47,7 @@ def send_notification_expired():
         end_storage_date__isnull=True,
     ).filter(
         models.Q(paid_up_to__lt=today) &
-        models.Q(paid_up_to__gt=six_month_before)
+        models.Q(paid_up_to__gt=six_month_before),
     )
     for order in orders:
         send_email(order, get_subject_expired(order), get_message_expired(order))
@@ -55,7 +55,7 @@ def send_notification_expired():
 
 
 scheduler = BlockingScheduler(timezone=pytz.utc)
-now=datetime.datetime.now(tz=pytz.utc)
+now = datetime.datetime.now(tz=pytz.utc)
 scheduler.add_job(send_notification_expired, 'cron', day='24', hour=17, minute=30)
 scheduler.add_job(send_notification_prior, 'cron', hour=17, minute=31)
 

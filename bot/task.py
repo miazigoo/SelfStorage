@@ -11,6 +11,7 @@ from dateutil.relativedelta import relativedelta
 env = environs.Env()
 env.read_env()
 
+
 @celery.shared_task
 def send_notification():
     today = datetime.datetime.now(timezone('UTC')).date()
@@ -22,7 +23,7 @@ def send_notification():
     ).filter(
         models.Q(paid_up_to=three_days_before) |
         models.Q(paid_up_to=two_weeks_before) |
-        models.Q(paid_up_to=one_month_before)
+        models.Q(paid_up_to=one_month_before),
     )
     for order in orders:
         subject = f'Заказ № {order.pk}'
@@ -35,6 +36,7 @@ def send_notification():
             [order.client.email],
         )
 
+
 @celery.shared_task
 def send_notification_expired():
     today = datetime.datetime.now(timezone('UTC')).date()
@@ -43,7 +45,7 @@ def send_notification_expired():
         end_storage_date__isnull=True,
     ).filter(
         models.Q(paid_up_to__lt=today) &
-        models.Q(paid_up_to__gt=six_month_before)
+        models.Q(paid_up_to__gt=six_month_before),
     )
     for order in orders:
         subject = f'Заказ № {order.pk}'

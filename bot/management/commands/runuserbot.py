@@ -28,7 +28,8 @@ from bot.models import (Client, Order, Storage, DeliveryType,
 
 # Ведение журнала логов
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO,
 )
 
 logger = logging.getLogger(__name__)
@@ -108,7 +109,9 @@ def value_from_data(weight, size):
 
 
 class Command(BaseCommand):
-    help = 'Телеграм-бот'
+    """
+    Класс для запуска телеграм - бота
+    """
 
     def handle(self, *args, **kwargs):
         tg_token = settings.tg_token
@@ -124,19 +127,21 @@ class Command(BaseCommand):
                     InlineKeyboardButton("FAQ", callback_data='to_FAQ'),
                     InlineKeyboardButton("Заказать Бокс", callback_data="to_box_order"),
                     InlineKeyboardButton("Мои Боксы", callback_data="to_my_orders"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             if query:
                 query.edit_message_text(
-                    text=f"{start_text}\nВыберете интересующий вопрос", reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML
+                    text=f"{start_text}\nВыберете интересующий вопрос",
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
                 )
             else:
                 update.message.reply_text(
-                    text=f"{start_text}\nВыберете интересующий вас вопрос", reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML
+                    text=f"{start_text}\nВыберете интересующий вас вопрос",
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
                 )
 
             return 'GREETINGS'
@@ -162,17 +167,19 @@ class Command(BaseCommand):
                 [
                     InlineKeyboardButton("Контакты", callback_data='FAQ_contacts'),
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.answer()
             if query.data == 'to_FAQ':
                 query.edit_message_text(
-                    text="Выберете интересующий вопрос", reply_markup=reply_markup
+                    text="Выберете интересующий вопрос",
+                    reply_markup=reply_markup,
                 )
             else:
                 query.edit_message_text(
-                    text=FAQ_ANSWERS[query.data], reply_markup=reply_markup
+                    text=FAQ_ANSWERS[query.data],
+                    reply_markup=reply_markup,
                 )
             return 'SHOW_INFO'
 
@@ -188,14 +195,14 @@ class Command(BaseCommand):
                     ],
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
                     text=f"Наш склад {storage.name} находится по адресу:\n" +
                          f"{storage.address}\n" +
                          'Для заказа бокса,пожалуйста, выберите, как удобнее передать вещи:',
-                    reply_markup=reply_markup
+                    reply_markup=reply_markup,
                 )
             if query.data == 'Привезу_сам' or query.data == 'Заберите_бесплатно':
                 type_delivery = query.data
@@ -207,11 +214,12 @@ class Command(BaseCommand):
                     ],
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Знаете ли Вы вес своих вещей?", reply_markup=reply_markup
+                    text="Знаете ли Вы вес своих вещей?",
+                    reply_markup=reply_markup,
                 )
             if query.data == 'choose_weight':
                 keyboard = [
@@ -224,11 +232,12 @@ class Command(BaseCommand):
                         InlineKeyboardButton("50-75кг", callback_data="weight_50to75"),
                         InlineKeyboardButton("75кг+", callback_data="weight_ge_70"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Выберите вес", reply_markup=reply_markup
+                    text="Выберите вес",
+                    reply_markup=reply_markup,
                 )
 
             if re.match(r'^weight_.*', query.data):
@@ -243,11 +252,12 @@ class Command(BaseCommand):
                     ],
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Знаете ли объем ваших вещей", reply_markup=reply_markup
+                    text="Знаете ли объем ваших вещей",
+                    reply_markup=reply_markup,
                 )
             if query.data == 'choose_volume':
                 keyboard = [
@@ -260,11 +270,12 @@ class Command(BaseCommand):
                         InlineKeyboardButton("7 - 10 куб.м", callback_data="volume_7to10"),
                         InlineKeyboardButton("более 10 куб.м", callback_data="volume_ge_10"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Выберите объем", reply_markup=reply_markup
+                    text="Выберите объем",
+                    reply_markup=reply_markup,
                 )
 
             if re.match(r'^volume_.*', query.data):
@@ -279,7 +290,7 @@ class Command(BaseCommand):
                     ],
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 if re.match("^volume_", query.data):
@@ -293,14 +304,15 @@ class Command(BaseCommand):
                            "Чтобы продолжить оформление в соответствии с законодательством " \
                            "нам нужно Ваше согласие на обработку персональный данных"
                     query.edit_message_text(
-                        text=text, reply_markup=reply_markup
+                        text=text,
+                        reply_markup=reply_markup,
                     )
                 else:
                     query.edit_message_text(
                         text='''Спасибо за оформление заказа.
-                                Чтобы продолжить оформление в соответствии с законодательством 
-                                нам нужно Ваше согласие на обработку персональный данных ''',
-                        reply_markup=reply_markup
+Чтобы продолжить оформление в соответствии с законодательством
+нам нужно Ваше согласие на обработку персональный данных ''',
+                        reply_markup=reply_markup,
                     )
             query.answer()
             return 'ORDER_BOX'
@@ -314,14 +326,14 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             if client:
                 query.edit_message_text(
                     text="✅ <b> Введите адрес доставки</b>",
-                    reply_markup=reply_markup
+                    reply_markup=reply_markup,
                 )
                 context.user_data['chat_id'] = chat_id
                 context.user_data['nickname'] = client.nickname
@@ -333,7 +345,7 @@ class Command(BaseCommand):
             else:
                 query.edit_message_text(
                     text="В ответном сообщении укажите Ваш имя.",
-                    reply_markup=reply_markup
+                    reply_markup=reply_markup,
                 )
                 return 'GET_NAME'
 
@@ -348,12 +360,12 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
                 text=f"✅ Ув. {name}\n\n<b>Введите ваш номер телефона</b> ", reply_markup=reply_markup,
-                parse_mode=ParseMode.HTML
+                parse_mode=ParseMode.HTML,
             )
 
             return 'GET_PHONE'
@@ -365,11 +377,13 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ <b>Введите список вещей в одном сообщении:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
+                text='✅ <b>Введите список вещей в одном сообщении:</b>',
+                reply_markup=reply_markup,
+                parse_mode=ParseMode.HTML,
             )
 
             return 'GET_ITEM_LIST'
@@ -381,11 +395,13 @@ class Command(BaseCommand):
                 keyboard = [
                     [
                         InlineKeyboardButton("Назад", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b>Введите email:</b>', reply_markup=reply_markup, parse_mode=ParseMode.HTML
+                    text='✅ <b>Введите email:</b>',
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
                 )
 
                 return 'GET_EMAIL'
@@ -402,12 +418,13 @@ class Command(BaseCommand):
                 keyboard = [
                     [
                         InlineKeyboardButton("Назад", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 update.message.reply_text(
-                    text='✅ <b> Введите адрес доставки</b>', reply_markup=reply_markup,
-                    parse_mode=ParseMode.HTML
+                    text='✅ <b> Введите адрес доставки</b>',
+                    reply_markup=reply_markup,
+                    parse_mode=ParseMode.HTML,
                 )
 
                 return 'GET_ADDRESS'
@@ -423,11 +440,12 @@ class Command(BaseCommand):
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text='✅ Назовите заказ. Например, зимние куртки или Спорт инвентарь', reply_markup=reply_markup
+                text='✅ Назовите заказ. Например, зимние куртки или Спорт инвентарь',
+                reply_markup=reply_markup,
             )
 
             return 'GET_ORDER_NAME'
@@ -461,7 +479,7 @@ class Command(BaseCommand):
                     'address': address,
                     'email': email,
                     'tel_number': phone_number,
-                    'personal_data_consent': True
+                    'personal_data_consent': True,
                 })
 
             order = Order.objects.create(
@@ -474,20 +492,21 @@ class Command(BaseCommand):
             )
             delivery_type = DeliveryType.objects.get_or_create(name="забрать вещи у клиента")
             if type_delivery == 'Заберите_бесплатно':
-                delivery = Delivery.objects.create(
+                Delivery.objects.create(
                     type=delivery_type[0],
                     order=order,
-                    need_measurement=bool_measurement
+                    need_measurement=bool_measurement,
                 )
 
             keyboard = [
                 [
                     InlineKeyboardButton("Назад", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                text="Ваш заказ успешно создан", reply_markup=reply_markup
+                text="Ваш заказ успешно создан",
+                reply_markup=reply_markup,
             )
             return 'GREETINGS'
 
@@ -503,11 +522,12 @@ class Command(BaseCommand):
                         [
                             InlineKeyboardButton("Заказать Бокс", callback_data="to_box_order"),
                             InlineKeyboardButton("На главный", callback_data="to_start"),
-                        ]
+                        ],
                     ]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     query.edit_message_text(
-                        text="У нас еще нет Ваших вещей на хранении", reply_markup=reply_markup
+                        text="У нас еще нет Ваших вещей на хранении",
+                        reply_markup=reply_markup,
                     )
                 else:
                     orders_keyboard = []
@@ -518,11 +538,12 @@ class Command(BaseCommand):
                     to_start_keyboard = [
                         [
                             InlineKeyboardButton("На главный", callback_data="to_start"),
-                        ]
+                        ],
                     ]
                     orders_markup = InlineKeyboardMarkup(orders_keyboard + to_start_keyboard)
                     query.edit_message_text(
-                        text=f"У вас есть {len(orders)} боксов. Выберите нужный", reply_markup=orders_markup
+                        text=f"У вас есть {len(orders)} боксов. Выберите нужный",
+                        reply_markup=orders_markup,
                     )
 
             if query.data.startswith('order_') or query.data == 'FAQ_forget':
@@ -539,18 +560,20 @@ class Command(BaseCommand):
                     [
                         InlineKeyboardButton("Заказы", callback_data="to_my_orders"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 order_markup = InlineKeyboardMarkup(order_keyboard + to_orders_keyboard)
                 if query.data.startswith('order_'):
                     order_pk = int(query.data.split('_')[1])
                     context.user_data['order_pk'] = order_pk
                     query.edit_message_text(
-                        text="Что Вы хотите сделать?", reply_markup=order_markup
+                        text="Что Вы хотите сделать?",
+                        reply_markup=order_markup,
                     )
                 else:
                     query.edit_message_text(
-                        text=FAQ_ANSWERS[query.data], reply_markup=order_markup
+                        text=FAQ_ANSWERS[query.data],
+                        reply_markup=order_markup,
                     )
             if query.data == "list_things":
                 order = orders.get(id=context.user_data['order_pk'])
@@ -558,11 +581,12 @@ class Command(BaseCommand):
                     [
                         InlineKeyboardButton("Заказы", callback_data="to_my_orders"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text=f"Ваш список вещей: {order.things}", reply_markup=reply_markup
+                    text=f"Ваш список вещей: {order.things}",
+                    reply_markup=reply_markup,
                 )
             if query.data == 'take_things':
                 keyboard = [
@@ -573,11 +597,12 @@ class Command(BaseCommand):
                     [
                         InlineKeyboardButton("Заказы", callback_data="to_my_orders"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Пожалуйста, выберите, как вы хотите забрать вещи:", reply_markup=reply_markup
+                    text="Пожалуйста, выберите, как вы хотите забрать вещи:",
+                    reply_markup=reply_markup,
                 )
             return 'SHOW_ORDERS'
 
@@ -603,11 +628,12 @@ class Command(BaseCommand):
                     [
                         InlineKeyboardButton("Заказы", callback_data="to_my_orders"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
-                    text="Вы хотите забрать вещи насовсем?", reply_markup=reply_markup
+                    text="Вы хотите забрать вещи насовсем?",
+                    reply_markup=reply_markup,
                 )
 
             if context.user_data['self_delivery'] and (query.data == "Насовсем" or query.data == "Верну"):
@@ -616,16 +642,16 @@ class Command(BaseCommand):
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 context.bot.send_message(
-                    text=f'Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. ' \
-                         'Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса. ' \
-                         'Вы можете в любой момент вернуть вещи обратно на хранение. ' \
+                    text=f'Вы можете забрать Ваши вещи в любое удобное для Вас время по адреcу: {storage.address}. '
+                         'Склад работает круглосуточно. Прилагаемый QR-код является ключом для Вашего бокса. '
+                         'Вы можете в любой момент вернуть вещи обратно на хранение. '
                          'Для этого Вы можете либо самостоятельно привезти их нам, либо заказать доставку.',
                     chat_id=update.effective_chat.id,
-                    reply_markup=reply_markup
+                    reply_markup=reply_markup,
                 )
 
             if not context.user_data['self_delivery'] and (query.data == "Насовсем" or query.data == "Верну"):
@@ -634,45 +660,45 @@ class Command(BaseCommand):
                         InlineKeyboardButton("Подтвердить", callback_data="accept"),
                         InlineKeyboardButton("Заказы", callback_data="to_my_orders"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
                     text=f"Вы хотите, чтобы мы привезли Вам вещи по адресу {client.address} за 12 рублей/километр?",
-                    reply_markup=reply_markup
+                    reply_markup=reply_markup,
                 )
             if query.data == "Насовсем":
                 order.end_storage_date = close_time
                 order.save()
             if query.data == "accept":
                 order = Order.objects.get(pk=order_pk)
-                type = DeliveryType.objects.get(pk=2)
+                type_ = DeliveryType.objects.get(pk=2)
                 delivery, created = Delivery.objects.get_or_create(
                     order=order,
-                    type=type,
+                    type=type_,
                     delivered_at=None,
                     defaults={
                         'need_measurement': False,
-                    }
+                    },
                 )
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 if created:
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     query.edit_message_text(
-                        text=f'Ваш заказ на доставку №{delivery.pk} по заказу №{order_pk} успешно сформирован! ' \
+                        text=f'Ваш заказ на доставку №{delivery.pk} по заказу №{order_pk} успешно сформирован! '
                              'В ближайшее время с Вами свяжется наш специалист для уточнения времени доставки.',
-                        reply_markup=reply_markup
+                        reply_markup=reply_markup,
                     )
                 else:
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     query.edit_message_text(
-                        text=f'У Вас уже есть заказ на доставку №{delivery.pk} по заказу №{order_pk}! ' \
+                        text=f'У Вас уже есть заказ на доставку №{delivery.pk} по заказу №{order_pk}! '
                              'В ближайшее время с Вами свяжется наш специалист для уточнения времени доставки.',
-                        reply_markup=reply_markup
+                        reply_markup=reply_markup,
                     )
 
             return 'DELIVERY'
@@ -682,7 +708,7 @@ class Command(BaseCommand):
             logger.info("Пользователь %s отменил разговор.", user.first_name)
             update.message.reply_text(
                 'До новых встреч',
-                reply_markup=ReplyKeyboardRemove()
+                reply_markup=ReplyKeyboardRemove(),
             )
             return ConversationHandler.END
 
@@ -704,7 +730,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(show_my_orders, pattern='to_my_orders|order_.*|FAQ_forget|.*_things'),
                     CallbackQueryHandler(order_box, pattern='to_box_order'),
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
-                    CallbackQueryHandler(process_delivery, pattern='.*_delivery')
+                    CallbackQueryHandler(process_delivery, pattern='.*_delivery'),
                 ],
                 'DELIVERY': [
                     CallbackQueryHandler(process_delivery, pattern='(Насовсем|Верну|accept)'),
@@ -721,7 +747,7 @@ class Command(BaseCommand):
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
 
                 ],
-                'GET_NAME':[
+                'GET_NAME': [
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                     MessageHandler(Filters.text, get_name),
                 ],
@@ -746,7 +772,7 @@ class Command(BaseCommand):
                     MessageHandler(Filters.text, get_order_name),
                 ],
             },
-            fallbacks=[CommandHandler('cancel', cancel)]
+            fallbacks=[CommandHandler('cancel', cancel)],
         )
 
         dispatcher.add_handler(conv_handler)
