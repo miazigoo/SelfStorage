@@ -1,7 +1,5 @@
-import os
-
-import dj_database_url
 from pathlib import Path
+
 from environs import Env
 
 env = Env()
@@ -30,7 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'bot'
+    'bot',
 ]
 
 MIDDLEWARE = [
@@ -68,9 +66,10 @@ WSGI_APPLICATION = 'SelfStorage.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.parse(
-        os.getenv('DATABASE', 'sqlite:///db.sqlite3')
-    ),
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    },
 }
 
 
@@ -117,10 +116,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.mail.ru'
-EMAIL_PORT = 2525
-EMAIL_USE_TLS=False
-EMAIL_USE_SSL=True
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = int(env('EMAIL_PORT'))
+EMAIL_USE_TLS = bool(env('EMAIL_USE_TLS'))
+EMAIL_USE_SSL = bool(env('EMAIL_USE_SSL'))
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 SERVER_EMAIL = EMAIL_HOST_USER

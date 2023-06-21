@@ -23,12 +23,14 @@ def send_email(order, subject, message):
     server.sendmail(fromaddr, toaddr, text)
     server.quit()
 
+
 def get_subject_prior(order):
     return f'Заказ №{order.pk} - заканчивается хранение'
 
 
 def get_subject_expired(order):
     return f'Заказ №{order.pk} - закончилось хранение'
+
 
 def get_message_prior(order):
     return """
@@ -51,11 +53,11 @@ def get_message_prior(order):
             border-radius: 10px;
           }
           .logo {
-            font-size: 26px; 
+            font-size: 26px;
             font-weight: bold;
             text-align: center;
-            letter-spacing: 2px; 
-            color: #333; 
+            letter-spacing: 2px;
+            color: #333;
             margin-top: 10px;
             }
           .message {
@@ -85,8 +87,10 @@ def get_message_prior(order):
           <div class="logo">SelfStorage</div>
           <div class="message">
             <p>Уважаемый клиент,</p>
-            <p>Хотим напомнить, что срок хранения Вашего заказа заканчивается <strong>{order.paid_up_to.strftime("%d.%m.%Y")}</strong>.</p>
-            <p>Пожалуйста, своевременно продлите хранение Ваших вещей или заберите их, чтобы избежать дополнительных расходов.</p>
+            <p>Хотим напомнить, что срок хранения Вашего заказа заканчивается
+            <strong>{order.paid_up_to.strftime("%d.%m.%Y")}</strong>.</p>
+            <p>Пожалуйста, своевременно продлите хранение Ваших вещей или заберите их,
+             чтобы избежать дополнительных расходов.</p>
           </div>
           <div class="cta">
             <a href="https://t.me/test_python_zeder_bot">Перейти в чат-бот</a>
@@ -120,13 +124,13 @@ def get_message_expired(order):
             padding: 20px;
             border: 1px solid #ccc;
             border-radius: 10px;
-          }
+            }
           .logo {
-            font-size: 26px; 
+            font-size: 26px;
             font-weight: bold;
             text-align: center;
-            letter-spacing: 2px; 
-            color: #333; 
+            letter-spacing: 2px;
+            color: #333;
             margin-top: 10px;
             }
           .message {
@@ -156,12 +160,12 @@ def get_message_expired(order):
           <div class="logo">SelfStorage</div>
           <div class="message">
             <p>Уважаемый клиент,</p>
-            <p>Хотим напомнить, что срок хранения Вашего заказа №{order.pk} закончился 
+            <p>Хотим напомнить, что срок хранения Вашего заказа №{order.pk} закончился
             <strong>{order.paid_up_to.strftime("%d.%m.%Y")}</strong>.</p>
             <p>Мы будем хранить Ваши вещи еще в течение полугода после окончания срока хранения до
              <strong>{ (order.paid_up_to + relativedelta(months=6)).strftime('%d.%m.%Y')}</strong>
             Пожалуйста, заберите свои вещи в ближайшее время или продлите срок хранения.
-            После <strong>{ (order.paid_up_to + relativedelta(months=6)).strftime('%d.%m.%Y')}</strong> мы будем 
+            После <strong>{ (order.paid_up_to + relativedelta(months=6)).strftime('%d.%m.%Y')}</strong> мы будем
             вынуждены утилизировать Ваши вещи.</p>
             <p>Спасибо за использование услуг нашей компании.</p>
           </div>

@@ -1,9 +1,9 @@
-import logging
 import datetime
-from pytz import timezone
+import logging
+
 from django.core.management.base import BaseCommand
-from SelfStorage import settings
 from django.db.models import Q
+from pytz import timezone
 from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
@@ -17,33 +17,31 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
 )
+
+from SelfStorage import settings
 from bot.bitly import get_clicks
 from bot.models import (
     Advertisement,
     Delivery,
     Order,
 )
+from bot.text_templates import (
+    get_client_contact_for_delivery,
+    get_client_contact_for_expired,
+)
 
 # Ведение журнала логов
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def step_count():
-    step = 1
-    while True:
-        yield step
-        step = step + 1
-
-
-step_counter = step_count()
-
-
 class Command(BaseCommand):
-    help = 'Телеграм-бот'
+    """
+    Команда для запуска телеграм-бота
+    """
 
     def handle(self, *args, **kwargs):
         updater = Updater(token=settings.tg_token_admin, use_context=True)
@@ -59,17 +57,19 @@ class Command(BaseCommand):
                     InlineKeyboardButton("Реклама", callback_data='to_ad'),
                     InlineKeyboardButton("Доставки", callback_data="to_delivery"),
                     InlineKeyboardButton("Просрочки", callback_data="to_expired"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             if query:
                 query.edit_message_text(
-                    text="Выберете интересующий вопрос", reply_markup=reply_markup
+                    text="Выберете интересующий вопрос",
+                    reply_markup=reply_markup,
                 )
             else:
                 update.message.reply_text(
-                    text="Выберете интресующий вас вопрос", reply_markup=reply_markup
+                    text="Выберете интресующий вас вопрос",
+                    reply_markup=reply_markup,
                 )
 
             return 'MAIN_MENU'
@@ -78,18 +78,12 @@ class Command(BaseCommand):
             query = update.callback_query
             deliveries = Delivery.objects.filter(
                 Q(type__pk=1, took_at__isnull=True) |
-                Q(type__pk=2, delivered_at__isnull=True)
+                Q(type__pk=2, delivered_at__isnull=True),
             )
             client_contacts = []
             if query.data == 'to_delivery':
                 for delivery in deliveries:
-                    client_contact = f"""
-Заказ:{delivery.order.pk} - {delivery.type.name}
----------------------------------------    
-Имя клиента: {delivery.order.client.name}
-Aдрес: {delivery.order.client.address}
-Номер телефона клиента: {delivery.order.client.tel_number}
-"""
+                    client_contact = get_client_contact_for_delivery(delivery)
                     client_contacts.append(client_contact)
                 client_contacts = "\n".join(client_contacts)
                 if not client_contacts:
@@ -97,7 +91,7 @@ Aдрес: {delivery.order.client.address}
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
@@ -114,12 +108,7 @@ Aдрес: {delivery.order.client.address}
             orders = Order.objects.filter(end_storage_date__isnull=True, paid_up_to__lt=today)
             client_contacts = []
             for order in orders:
-                client_contact = f"""
-Заказ:{order.pk} - {(today - order.paid_up_to).days} дней просрочки
----------------------------------------    
-Имя клиента: {order.client.name}
-Номер телефона клиента: {order.client.tel_number}
-"""
+                client_contact = get_client_contact_for_expired(today, order)
                 client_contacts.append(client_contact)
             client_contacts = "\n".join(client_contacts)
             if not client_contacts:
@@ -128,7 +117,7 @@ Aдрес: {delivery.order.client.address}
                 keyboard = [
                     [
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 query.edit_message_text(
@@ -149,11 +138,12 @@ Aдрес: {delivery.order.client.address}
                 ],
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(
-                text="Выберите, что Вы хотите сделать", reply_markup=reply_markup
+                text="Выберите, что Вы хотите сделать",
+                reply_markup=reply_markup,
             )
             query.answer()
             return 'SHOW_AD'
@@ -170,13 +160,13 @@ Aдрес: {delivery.order.client.address}
             to_start_keyboard = [
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             to_stat_keyboard = [
                 [
                     InlineKeyboardButton("Кампании", callback_data="to_stat"),
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             campaigns_markup = InlineKeyboardMarkup(campaigns_keyboard + to_start_keyboard)
             stat_markup = InlineKeyboardMarkup(to_stat_keyboard)
@@ -184,7 +174,8 @@ Aдрес: {delivery.order.client.address}
 
             if query.data == 'to_stat':
                 query.edit_message_text(
-                    text="Выберите компанию, по которой хотите узнать статистику:", reply_markup=campaigns_markup
+                    text="Выберите компанию, по которой хотите узнать статистику:",
+                    reply_markup=campaigns_markup,
                 )
 
             if query.data.startswith('stat_'):
@@ -192,7 +183,8 @@ Aдрес: {delivery.order.client.address}
                 url = Advertisement.objects.get(pk=ad_pk).url
                 text = get_clicks(url, bitly_token)
                 query.edit_message_text(
-                    text=text, reply_markup=stat_markup
+                    text=text,
+                    reply_markup=stat_markup,
                 )
 
             return 'SHOW_STAT'
@@ -203,7 +195,7 @@ Aдрес: {delivery.order.client.address}
             keyboard = [
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             query.edit_message_text(
@@ -224,7 +216,7 @@ Aдрес: {delivery.order.client.address}
                         InlineKeyboardButton("Посмотреть", callback_data=callback_data),
                         InlineKeyboardButton("Изменить ссылку", callback_data="add_new_campaign"),
                         InlineKeyboardButton("На главный", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyword)
                 context.bot.send_message(chat_id=update.effective_chat.id,
@@ -236,7 +228,7 @@ Aдрес: {delivery.order.client.address}
                 keyboard = [
                     [
                         InlineKeyboardButton("Назад", callback_data="to_start"),
-                    ]
+                    ],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
                 text = 'Вы ввели ссылку: ' + update.message.text + '\nВведите название кампании:'
@@ -255,7 +247,7 @@ Aдрес: {delivery.order.client.address}
             keyboard = [
                 [
                     InlineKeyboardButton("На главный", callback_data="to_start"),
-                ]
+                ],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             text = 'Вы ввели: ' + update.message.text + '\nНовая кампания успешно добавлена в базу данных'
@@ -268,7 +260,7 @@ Aдрес: {delivery.order.client.address}
             logger.info("Пользователь %s отменил разговор.", user.first_name)
             update.message.reply_text(
                 'До новых встреч',
-                reply_markup=ReplyKeyboardRemove()
+                reply_markup=ReplyKeyboardRemove(),
             )
             return ConversationHandler.END
 
@@ -309,7 +301,7 @@ Aдрес: {delivery.order.client.address}
                     CallbackQueryHandler(start_conversation, pattern='to_start'),
                 ],
             },
-            fallbacks=[CommandHandler('cancel', cancel)]
+            fallbacks=[CommandHandler('cancel', cancel)],
         )
 
         dispatcher.add_handler(conv_handler)

@@ -20,7 +20,7 @@ Client.objects.create(
     tel_number='+7(926)541-45-16',
     email='charmyru@mail.ru',
     personal_data_consent=True,
-    address='Москва, ул. Кременчугская, д.12, кв. 192'
+    address='Москва, ул. Кременчугская, д.12, кв. 192',
 )
 Client.objects.create(
     chat_id='567903',
@@ -29,7 +29,7 @@ Client.objects.create(
     tel_number='+7(916)324-90-09',
     email='sveta@gmail.com',
     personal_data_consent=True,
-    address='Москва, ул. 50-ти летия Октября, д. 118, кв. 24'
+    address='Москва, ул. 50-ти летия Октября, д. 118, кв. 24',
 )
 Storage.objects.create(
     name='Основной склад',
@@ -82,14 +82,14 @@ Order.objects.create(
     title='Диван',
 )
 Delivery.objects.create(
-    need_measurement = False,
+    need_measurement=False,
     order=Order.objects.get(pk=1),
-    type=DeliveryType.objects.get(pk=1)
+    type=DeliveryType.objects.get(pk=1),
 )
 Delivery.objects.create(
-    need_measurement = False,
+    need_measurement=False,
     order=Order.objects.get(pk=2),
-    type=DeliveryType.objects.get(pk=1)
+    type=DeliveryType.objects.get(pk=1),
 )
 Advertisement.objects.create(
     name='Первая кампания',
@@ -110,7 +110,7 @@ Client.objects.create(
     tel_number='+7(926)561-49-36',
     email='n.a.kashaeva@gmail.com',
     personal_data_consent=True,
-    address='Москва, просп. Андропова, 18, корп. 7, кв. 155'
+    address='Москва, просп. Андропова, 18, корп. 7, кв. 155',
 )
 Order.objects.create(
     client=Client.objects.get(pk=3),
